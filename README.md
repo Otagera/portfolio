@@ -1,3 +1,8 @@
+# `My Portfolio`
+This is the github page of my portfolio that coi=uld be found [here](https://othnielagera.netlify.app).
+
+## 
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
