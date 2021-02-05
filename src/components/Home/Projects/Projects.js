@@ -17,7 +17,7 @@ class Projects extends Component{
 				desc: '',
 				technologiesUsed: ['HTML5', 'CSS', 'Javascript', 'jQuery', 'SimpleBar'],
 				link: {
-					details: '/project/sales-app-js',
+					//details: '/project/sales-app-js',
 					code: 'https://github.com/Otagera/Sales-App-Basic',
 					livePreview: 'https://trusting-mcnulty-b795fc.netlify.app'
 				}
@@ -28,7 +28,7 @@ class Projects extends Component{
 				desc: '',
 				technologiesUsed: ['ExpressJs', 'MongoDB', 'NodeJS', 'Ejs template engine', 'jQuery', 'SimpleBar'],
 				link: {
-					details: '/project/sales-app-express',
+					//details: '/project/sales-app-express',
 					code: '',
 					livePreview: 'https://gentle-earth-84384.herokuapp.com'
 				}
@@ -39,7 +39,7 @@ class Projects extends Component{
 				desc: '',
 				technologiesUsed: ['ReactJS', 'SCSS', 'ExpressJS', 'MongoDB', 'NodeJS', 'Cloudinary'],
 				link: {
-					details: '/project/job-listing',
+					//details: '/project/job-listing',
 					code: 'https://github.com/Otagera/job-listings',
 					livePreview: 'https://lenxo-listings.netlify.app'
 				}
@@ -50,7 +50,7 @@ class Projects extends Component{
 				desc: '',
 				technologiesUsed: ['ReactJS', 'SCSS'],
 				link: {
-					details: '/project/rps',
+					//details: '/project/rps',
 					code: 'https://github.com/Otagera/rps',
 					livePreview: 'https://lenxo-rps.netlify.app'
 				}
@@ -61,7 +61,7 @@ class Projects extends Component{
 				desc: '',
 				technologiesUsed: ['ReactJS', 'Redux', 'SCSS', 'ExpressJS', 'MongoDB', 'NodeJS', 'Cloudinary'],
 				link: {
-					details: '/project/e-voting',
+					//details: '/project/e-voting',
 					code: 'https://github.com/Otagera/e-voting',
 					livePreview: 'https://e-voting-lenxo.netlify.app'
 				}

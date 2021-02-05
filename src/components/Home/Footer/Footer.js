@@ -1,6 +1,5 @@
 import React from 'react';
 import { Flex, Text, Icon, createIcon } from '@chakra-ui/react';
-import { FaHeart } from 'react-icons/fa';
 
 import Aux from '../../../hoc/Auxillary/Auxillary';
 import NameBrand from '../../UI/NameBrand/NameBrand';
