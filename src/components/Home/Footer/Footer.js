@@ -1,8 +1,9 @@
 import React from 'react';
-import { Box, Text, Icon, createIcon } from '@chakra-ui/react';
+import { Flex, Text, Icon, createIcon } from '@chakra-ui/react';
 import { FaHeart } from 'react-icons/fa';
 
 import Aux from '../../../hoc/Auxillary/Auxillary';
+import NameBrand from '../../UI/NameBrand/NameBrand';
 
 const nigeriaFlag = createIcon({
     displayName: 'Nigerian Flag',
@@ -24,11 +25,16 @@ const nigeriaFlag = createIcon({
 
 const footer = ( props )=>{
 	return (
-        <Box my='auto' w='max-content'>
-          <Text>
-            Handcrafted in <Icon as={nigeriaFlag} boxSize='1.5em'  author='Icon made by Roundicons from www.flaticon.com'/> by Othniel <Icon as={FaHeart} boxSize='1em' color='red' />
-          </Text>
-        </Box>		
+        <Flex my='auto' w={['300px', 'max-content']} wrap='wrap' d='column'>
+        	<Flex w='max-content' mx='auto' >
+				<Text px={1}> Handcrafted in </Text>
+		        <Icon as={nigeriaFlag} boxSize='1.5em'  author='Icon made by Roundicons from www.flaticon.com'/> 
+	            <Text px={1}> by </Text>
+        	</Flex>
+        	<Flex w='max-content' mx='auto' >
+	            <NameBrand w='12em' h='2.5em' nameBrandType='capitalBarSeperatedBlockThemeColor' />
+        	</Flex>
+        </Flex>		
 	);
 }
 export default footer;

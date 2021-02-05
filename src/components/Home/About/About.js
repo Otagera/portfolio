@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Heading, Flex, Text, Divider, createIcon, Icon, useColorModeValue } from '@chakra-ui/react';
+import { Box, Heading, Flex, Text, Divider, createIcon, Icon, useColorModeValue, Image } from '@chakra-ui/react';
 
 import Aux from '../../../hoc/Auxillary/Auxillary';
+import fullShot from '../../../assets/images/full-shot.jpg';
 
 const About = ( props )=>{
 	const quoteSvg = createIcon({
@@ -10,15 +11,17 @@ const About = ( props )=>{
 	    path: (
 	      <Aux>
 	        <path d="M0,4v12h8c0,4.41-3.586,8-8,8v4c6.617,0,12-5.383,12-12V4H0z"/>
-			<path d="M20,4v12h8c0,4.41-3.586,8-8,8v4c6.617,0,12-5.383,12-12V4H20z"/>
+    			<path d="M20,4v12h8c0,4.41-3.586,8-8,8v4c6.617,0,12-5.383,12-12V4H20z"/>
 	      </Aux>
 	    )
 	});
-	const quoteFill = useColorModeValue('cyan.900', 'cyan.100');
+  const quoteFill = useColorModeValue('cyan.900', 'cyan.100');
+	const fullImageOpacity = useColorModeValue('0.7', '0.35');
 	return (
-        <Box ml='auto' w={['100%', '95%']}>
+        <Box ml='auto' w={['100%', '95%']} overflowX={['hidden', 'initial']} position='relative'>
           <Heading as='h3' mx='auto'>Who is Othniel?</Heading>
-          <Icon as={quoteSvg} boxSize='6em' fill={quoteFill} opacity='0.1' ml={[0, 100]} position='absolute'/>
+          <Icon as={quoteSvg} boxSize='6em' fill={quoteFill} opacity='0.5' ml={[0, 100]} position='absolute' zIndex={-1}/>
+          <Image src={fullShot} ml='auto' mt={['200px', null, '0']} borderRadius='lg' opacity={fullImageOpacity} position='absolute' left='38%' zIndex={-1} h='450px' />
           <Flex direction={['column', 'row']} w={['95%', '80%']} mx='auto'>
             <Box w={['100%', '50%']} p={3}>
               <Text py={2}>
@@ -40,7 +43,7 @@ const About = ( props )=>{
               <Text py={2}>
                 Over the past year I've grown as a developer even with prior knowledge in programming.
                 I've learnt how the web works fundamentally, built websites and applications using
-                different tools from KnockoutJS, BackboneJs and presently ReactJs with Scss and ejs
+                different tools from KnockoutJS, BackboneJs and presently ReactJs with SCSS and ejs
                 template engine while working with express in the frontend. In the backend I only
                 have experience with Express Js and mongoose for interfacing with MongoDB database.
               </Text>
