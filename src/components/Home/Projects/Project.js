@@ -7,8 +7,7 @@ const project = ( props )=>{
 	return (
 		<Box colSpan='2' w={['95%', null, null, '450px', '535px']} borderWidth={['5px', '1px']}
 			borderRadius='lg' minHeight='300px' gridColumnStart={[null, null, null, colStart]}
-			gridColumnEnd={[null, null, null, colEnd]} boxShadow='dark-lg' m='auto' p='6' mb='5'
-			_hover={{ 'scale': '1.05', 'transition': 'all 2s ease .5s'}}>
+			gridColumnEnd={[null, null, null, colEnd]} boxShadow='dark-lg' m='auto' p='6' mb='5' >
 			<Image src={project.img} borderRadius='lg'/>
 			<Heading as='h3'>{project.title}</Heading>
 			<Text>{project.desc}</Text>

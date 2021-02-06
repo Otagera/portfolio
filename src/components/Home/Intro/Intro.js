@@ -5,7 +5,7 @@ import headShot from '../../../assets/images/head-shot.jpg';
 
 const about = ( props )=>{
 	return (
-        <Box mx='auto' w={['100%', '95%']}>
+        <Box mx='auto' mt='50px' w={['100%', '95%']}>
           <Heading as='h1' my={10}>
             Hello world, I'm Othniel a
               <Text color='teal.500' as='em'> fullstack developer. </Text>
