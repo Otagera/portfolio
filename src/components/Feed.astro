@@ -1,0 +1,71 @@
+---
+import { getCollection } from 'astro:content';
+import projects from '../data/projects.json';
+import { getAllViews } from '../lib/db';
+
+const writing = (await getCollection('writing')).sort((a, b) => {
+	return new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+});
+const views = getAllViews();
+---
+
+<div class="space-y-24">
+  <!-- Projects Section -->
+  <section id="projects" class="space-y-8">
+    <div class="text-teal-400">$ ls -la projects/</div>
+    <div class="space-y-12">
+      {projects.map((project) => (
+        <div class="group border-l-2 border-gray-800 pl-6 py-2 hover:border-teal-500 transition-all duration-200">
+          <div class="flex justify-between items-baseline mb-2">
+            <a href={project.link} target="_blank" class="text-lg font-bold text-teal-300 hover:text-teal-200 transition-colors">
+              {project.title}
+            </a>
+            <span class="text-xs text-gray-600 font-mono">{project.year}</span>
+          </div>
+          <p class="text-gray-400 text-sm leading-relaxed mb-4">
+            {project.desc}
+          </p>
+          <div class="flex flex-wrap gap-3">
+            {project.tech.map((t) => (
+              <span class="text-[10px] uppercase tracking-wider text-gray-500 bg-gray-900/50 px-2 py-1 rounded border border-gray-800">
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- Writing Section -->
+  <section id="writing" class="space-y-8">
+    <div class="text-teal-400">$ cat writing/recent_logs.md</div>
+    <div class="space-y-10">
+      {writing.map((post) => (
+        <a href={`/writing/${post.slug}`} class="block group">
+          <article>
+            <div class="flex justify-between items-baseline mb-1">
+              <h3 class="text-lg font-bold text-gray-200 group-hover:text-teal-300 transition-colors">
+                {post.data.title}
+              </h3>
+              <div class="flex items-center space-x-4">
+                <span class="text-[10px] text-gray-700 font-mono">
+                  {views[post.slug] || 0} views
+                </span>
+                <time class="text-xs text-gray-600 font-mono whitespace-nowrap">
+                  {post.data.date}
+                </time>
+              </div>
+            </div>
+            <p class="text-gray-500 text-sm mb-3 group-hover:text-gray-400 transition-colors">
+              {post.data.summary}
+            </p>
+            <div class="text-[10px] text-teal-600 font-bold uppercase tracking-widest">
+              {post.data.readTime} READ
+            </div>
+          </article>
+        </a>
+      ))}
+    </div>
+  </section>
+</div>

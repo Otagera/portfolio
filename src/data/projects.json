@@ -1,0 +1,37 @@
+[
+	{
+		"title": "Letterboxd CLI (My Movies)",
+		"desc": "A simple CLI tool for Letterboxd enthusiasts. Features a hybrid recommendation engine using semantic search (ChromaDB), automated data syncing via Puppeteer, and local caching with SQLite.",
+		"tech": ["TypeScript", "ChromaDB", "Puppeteer", "SQLite", "TMDb API"],
+		"link": "https://github.com/Otagera/MY-MOVIES-CLI",
+		"year": "2025"
+	},
+	{
+		"title": "Chatterbox Logging Engine",
+		"desc": "A high-performance log aggregation and monitoring tool. Utilizes HTMX for real-time dashboard updates and Express.js for efficient stream processing.",
+		"tech": ["Node.js", "HTMX", "Express.js", "TypeScript"],
+		"link": "https://github.com/Otagera/CHATTERBOX",
+		"year": "2025"
+	},
+	{
+		"title": "FXQL Parser & Exchange API",
+		"desc": "A specialized NestJS application implementing a custom Domain Specific Language (FXQL) for financial currency exchange operations.",
+		"tech": ["NestJS", "TypeScript", "Node.js", "PostgreSQL"],
+		"link": "https://github.com/Otagera/FXQL-BACKEND",
+		"year": "2024"
+	},
+	{
+		"title": "CHAP-IDYZZ Multi-Source API",
+		"desc": "An API orchestration system integrating MongoDB and Airtable. Demonstrates sophisticated multi-persistence patterns and third-party API consumption.",
+		"tech": ["Express.js", "TypeScript", "MongoDB", "Airtable"],
+		"link": "https://github.com/Otagera/CHAP-IDYZZ-API",
+		"year": "2022"
+	},
+	{
+		"title": "Job Listing",
+		"desc": "Full-stack job board application showcasing scalable backend architecture and clean UI patterns.",
+		"tech": ["React", "Node.js", "Express", "MongoDB"],
+		"link": "https://github.com/Otagera/job-listings",
+		"year": "2021"
+	}
+]
