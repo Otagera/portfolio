@@ -3,9 +3,19 @@ import { getCollection } from 'astro:content';
 import projects from '../data/projects.json';
 import { getAllViews } from '../lib/db';
 
-const writing = (await getCollection('writing')).sort((a, b) => {
+interface Props {
+	writingLimit?: number;
+}
+
+const { writingLimit } = Astro.props;
+
+const allWriting = (await getCollection('writing')).sort((a, b) => {
 	return new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
 });
+
+const writing = writingLimit ? allWriting.slice(0, writingLimit) : allWriting;
+const hasMoreWriting = writingLimit ? allWriting.length > writingLimit : false;
+
 const views = getAllViews();
 ---
 
@@ -39,7 +49,7 @@ const views = getAllViews();
 
   <!-- Writing Section -->
   <section id="writing" class="space-y-8">
-    <div class="text-teal-400">$ cat writing/recent_logs.md</div>
+    <div class="text-teal-400">$ cat writing/{writingLimit ? 'latest_logs.md' : 'all_logs.md'}</div>
     <div class="space-y-10">
       {writing.map((post) => (
         <a href={`/writing/${post.slug}`} class="block group">
@@ -60,12 +70,32 @@ const views = getAllViews();
             <p class="text-gray-500 text-sm mb-3 group-hover:text-gray-400 transition-colors">
               {post.data.summary}
             </p>
-            <div class="text-[10px] text-teal-600 font-bold uppercase tracking-widest">
-              {post.data.readTime} READ
+            <div class="flex items-center justify-between">
+              <div class="flex gap-3">
+                {post.data.tags?.map(tag => (
+                  <span 
+                    onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/writing/tag/' + this.textContent.trim().substring(1)"
+                    class="text-[10px] text-gray-600 font-mono italic hover:text-teal-400 cursor-pointer transition-colors"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+              <div class="text-[10px] text-teal-600 font-bold uppercase tracking-widest">
+                {post.data.readTime} READ
+              </div>
             </div>
           </article>
         </a>
       ))}
+      
+      {hasMoreWriting && (
+        <div class="pt-4">
+          <a href="/writing" class="text-sm text-teal-400 hover:text-teal-300 transition-colors font-mono">
+            $ cd writing/ && ls -la
+          </a>
+        </div>
+      )}
     </div>
   </section>
 </div>

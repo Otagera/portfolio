@@ -6,6 +6,7 @@ const writing = defineCollection({
 		date: z.string(),
 		readTime: z.string(),
 		summary: z.string(),
+		tags: z.array(z.string()).optional(),
 	}),
 });
 
