@@ -3,10 +3,15 @@ import tailwind from '@astrojs/tailwind';
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-	site: 'https://othnielagera.netlify.app',
-	integrations: [tailwind()],
-	output: 'server',
-	adapter: node({
-		mode: 'standalone',
-	}),
+  site: 'https://othnielagera.netlify.app',
+  integrations: [tailwind()],
+  output: 'server',
+  adapter: node({
+    mode: 'standalone',
+  }),
+  markdown: {
+    shikiConfig: {
+      theme: 'github-dark',
+    },
+  },
 });
