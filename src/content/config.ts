@@ -7,6 +7,7 @@ const writing = defineCollection({
 		readTime: z.string(),
 		summary: z.string(),
 		tags: z.array(z.string()).optional(),
+		draft: z.boolean().optional(),
 	}),
 });
 

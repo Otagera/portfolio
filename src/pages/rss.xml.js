@@ -2,7 +2,7 @@ import { getCollection } from 'astro:content';
 import rss from '@astrojs/rss';
 
 export async function GET(context) {
-	const writing = await getCollection('writing');
+	const writing = await getCollection('writing', ({ data }) => !data.draft);
 	return rss({
 		title: 'Othniel Agera | Backend Engineering Journal',
 		description:

@@ -4,6 +4,7 @@ date: "Feb 2026"
 readTime: "10 min"
 summary: "Exploring common architectural patterns for high-availability systems, including tables, diagrams, and media."
 tags: ["architecture", "distributed-systems", "design"]
+draft: true
 ---
 
 # Distributed System Design Patterns

@@ -4,6 +4,7 @@ date: "Jan 2026"
 readTime: "8 min"
 summary: "Evaluating Protobuf efficiency and stream-based communication in a microservices architecture."
 tags: ["architecture", "grpc", "microservices"]
+draft: true
 ---
 
 # Why I moved from REST to gRPC for internal services

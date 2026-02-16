@@ -8,7 +8,7 @@ import { getViews, incrementViews } from '../../lib/db';
 const { slug } = Astro.params;
 const entry = await getEntry('writing', slug);
 
-if (!entry) {
+if (!entry || (import.meta.env.PROD && entry.data.draft)) {
 	return Astro.redirect('/404');
 }
 
