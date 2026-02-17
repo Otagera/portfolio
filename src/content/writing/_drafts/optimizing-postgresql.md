@@ -1,6 +1,6 @@
 ---
 title: "Optimizing PostgreSQL for high-concurrency"
-date: "Feb 2026"
+date: "2026-02-08"
 readTime: "5 min"
 summary: "How we reduced lock contention by 60% using partitioning and fine-tuned vacuum settings."
 tags: ["database", "postgresql", "performance"]

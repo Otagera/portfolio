@@ -1,6 +1,6 @@
 ---
 title: "Deploying React on a Budget"
-date: "Feb 2026"
+date: "2026-02-10"
 readTime: "4 min"
 summary: "Moving from Netlify to a 1GB VPS: Tackling memory limits with swap space and Nginx configuration."
 tags: ["deployment", "react", "linux", "devops"]

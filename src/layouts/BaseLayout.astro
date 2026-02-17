@@ -7,7 +7,7 @@ const { title } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en" class="bg-[#0a0a0a] text-gray-100 selection:bg-teal-500/30">
+<html lang="en" class="dark">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
@@ -35,8 +35,27 @@ const { title } = Astro.props;
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+		
+		<script is:inline>
+			const theme = (() => {
+				if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+					return localStorage.getItem('theme');
+				}
+				if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+					return 'dark';
+				}
+				return 'light';
+			})();
+		
+			if (theme === 'light') {
+				document.documentElement.classList.remove('dark');
+			} else {
+				document.documentElement.classList.add('dark');
+			}
+		</script>
 	</head>
-	<body class="font-mono leading-relaxed antialiased">
+	<body class="font-mono leading-relaxed antialiased transition-colors duration-300">
 		<main class="mx-auto max-w-[80ch] px-6 py-24 min-h-screen">
 			<slot />
 		</main>
@@ -45,13 +64,49 @@ const { title } = Astro.props;
 
 <style is:global>
 	:root {
-		--accent: 20, 184, 166;
+		--bg-color: #fcfaf2;
+		--text-color: #1a1a1a;
+		--grid-color: #e5e7eb;
+		--accent-color: #0d9488; /* teal-600 */
 	}
+
+	.dark {
+		--bg-color: #0a0a0a;
+		--text-color: #ffffff;
+		--grid-color: #262626; /* Brighter for better visibility */
+		--accent-color: #2dd4bf; /* teal-400 */
+	}
+
 	html {
 		scroll-behavior: smooth;
 	}
+
 	body {
+		background-color: var(--bg-color);
+		color: var(--text-color);
 		background-size: 20px 20px;
-		background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+		background-image: 
+			radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+		background-attachment: fixed;
+	}
+
+	/* The Terminal Glow Effect */
+	.dark body {
+		background-image: 
+			radial-gradient(circle at 50% -20%, rgba(20, 184, 166, 0.07), transparent 80%),
+			radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+	}
+
+	/* KaTeX Fix */
+	.katex {
+		font-family: KaTeX_Main, Times New Roman, serif !important;
+		font-size: 1.1rem;
+		color: var(--accent-color);
+	}
+	
+	.katex-display {
+		margin: 2rem 0;
+		overflow-x: auto;
+		overflow-y: hidden;
 	}
 </style>

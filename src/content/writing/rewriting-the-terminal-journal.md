@@ -1,9 +1,9 @@
 ---
-title: "Rewriting the Terminal Journal: Philosophy and Process"
-date: "Feb 2026"
+title: "Rewriting the Portfolio to have a Journal"
+date: "2026-02-16"
 readTime: "8 min"
 summary: "A deep dive into the technical migration from React to Astro, SQLite-backed view tracking, and the engineering behind a terminal-inspired UI."
-tags: ["web-design", "astro", "philosophy", "performance", "sqlite"]
+tags: ["web-design", "astro", "journal", "sqlite"]
 ---
 
 # Rewriting the Terminal Journal

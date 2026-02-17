@@ -1,6 +1,6 @@
 ---
 title: "Distributed System Design Patterns"
-date: "Feb 2026"
+date: "2026-02-05"
 readTime: "10 min"
 summary: "Exploring common architectural patterns for high-availability systems, including tables, diagrams, and media."
 tags: ["architecture", "distributed-systems", "design"]
