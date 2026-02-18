@@ -1,6 +1,6 @@
-# The Terminal Journal
+# Othniel Agera
 
-Othniel Agera's portfolio and technical blog.
+Othniel Agera's portfolio and blog.
 
 Built with **Astro**, **Tailwind CSS**, and **SQLite**, this project follows a monospace, terminal-inspired aesthetic focusing on performance and technical clarity.
 

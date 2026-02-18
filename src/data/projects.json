@@ -1,37 +1,34 @@
 [
 	{
+		"title": "Strata DB",
+		"desc": "An educational project implementing internal storage engines from scratch. Features an LSM-Tree based Key-Value store and a JSON Document store with secondary indexing and MongoDB-style query operators.",
+		"task": "Implement core database storage structures (LSM-Trees, SSTables) and a MongoDB-compatible query engine from scratch.",
+		"tech": ["TypeScript", "Bun", "Node.js"],
+		"link": "https://github.com/Otagera/strata-ts",
+		"year": "2026"
+	},
+	{
 		"title": "Letterboxd CLI (My Movies)",
-		"desc": "A simple CLI tool for Letterboxd enthusiasts. Features a hybrid recommendation engine using semantic search (ChromaDB), automated data syncing via Puppeteer, and local caching with SQLite.",
-		"tech": ["TypeScript", "ChromaDB", "Puppeteer", "SQLite", "TMDb API"],
+		"desc": "A local-first movie recommendation engine and watchlist manager. It builds a personalized taste profile by analyzing Letterboxd history and uses semantic search to find similar films from the TMDb database.",
+		"task": "Implement a hybrid recommendation system using vector embeddings and provide an interactive CLI for seamless movie discovery.",
+		"tech": ["TypeScript", "ChromaDB", "SQLite", "TMDb API", "Inquirer.js"],
 		"link": "https://github.com/Otagera/MY-MOVIES-CLI",
 		"year": "2025"
 	},
 	{
 		"title": "Chatterbox Logging Engine",
-		"desc": "A high-performance log aggregation and monitoring tool. Utilizes HTMX for real-time dashboard updates and Express.js for efficient stream processing.",
-		"tech": ["Node.js", "HTMX", "Express.js", "TypeScript"],
+		"desc": "A secure log management and background job processing engine. Features real-time log ingestion, advanced filtering, and encrypted storage with a dynamic HTMX-powered dashboard.",
+		"task": "Build a high-performance logging engine with encrypted storage and a dynamic dashboard for real-time monitoring.",
+		"tech": ["Node.js", "TypeScript", "HTMX", "Express.js", "MongoDB", "BullMQ", "Redis", "MikroORM"],
 		"link": "https://github.com/Otagera/CHATTERBOX",
 		"year": "2025"
 	},
 	{
-		"title": "FXQL Parser & Exchange API",
-		"desc": "A specialized NestJS application implementing a custom Domain Specific Language (FXQL) for financial currency exchange operations.",
-		"tech": ["NestJS", "TypeScript", "Node.js", "PostgreSQL"],
-		"link": "https://github.com/Otagera/FXQL-BACKEND",
-		"year": "2024"
-	},
-	{
-		"title": "CHAP-IDYZZ Multi-Source API",
-		"desc": "An API orchestration system integrating MongoDB and Airtable. Demonstrates sophisticated multi-persistence patterns and third-party API consumption.",
-		"tech": ["Express.js", "TypeScript", "MongoDB", "Airtable"],
-		"link": "https://github.com/Otagera/CHAP-IDYZZ-API",
-		"year": "2022"
-	},
-	{
-		"title": "Job Listing",
-		"desc": "Full-stack job board application showcasing scalable backend architecture and clean UI patterns.",
-		"tech": ["React", "Node.js", "Express", "MongoDB"],
-		"link": "https://github.com/Otagera/job-listings",
-		"year": "2021"
+		"title": "Anoda Facematch",
+		"desc": "An intelligent photo management system featuring automated face detection and recognition. It allows users to organize photos into albums and search for specific individuals using advanced facial matching.",
+		"task": "Develop a face-recognition-powered photo gallery with real-time updates and efficient background processing.",
+		"tech": ["React", "ElysiaJS", "Bun", "PostgreSQL", "Redis", "Tailwind CSS"],
+		"link": "https://github.com/Otagera/anoda",
+		"year": "2025"
 	}
 ]
