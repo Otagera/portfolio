@@ -8,17 +8,17 @@ tags: ["web-design", "astro", "journal", "sqlite"]
 
 # Rewriting the Terminal Journal
 
-My original portfolio was a typical React single-page application (SPA). It used Chakra UI, handled routing on the client side, and featured smooth, animated transitions. It was "modern" in the way we've been taught to build for the web over the last decade.
+My original portfolio was a typical React single-page application (SPA). It used Chakra UI, handled routing on the client side, and featured smooth, animated transitions—the standard way we've been taught to build for the web over the last decade. It was "modern" and "simple" for its time.
 
-But as I spent more time in the terminal—writing CLI tools in TypeScript and Go, and managing servers via SSH—my taste shifted. I wanted something that reflected my work: minimalist, high-performance, and fundamentally text-driven.
+But as I spent more time away from frontend work, and with the availability of AI, I thought it would be a good time for a refresh in terminal-style as my taste had shifted. I wanted something that reflected my work: minimalist, high-performance, and fundamentally text-driven.
 
 ## The Technical Shift: From SPA to Multi-Page Static
 
-The migration was more than just a CSS change. Moving to **Astro v5** allowed me to rethink the "why" of every component. In the React version, even a simple text page required a JavaScript bundle to hydrate. In the new version, the site is 99% static HTML, with JavaScript used only for minor interactions like the tag filtering logic.
+The migration was more than just a CSS change. Another consideration was to add a blog to the website. Moving to **Astro v5** allowed me to rethink the "why" of every component and have my writings served as Markdown. In the React version, even a simple text page required a JavaScript bundle to hydrate. In the new version, the site is 99% static HTML, with JavaScript used only for minor interactions like the tag filtering logic.
 
 ### 1. The SQLite View Engine
 
-One of the most complex parts of the rewrite was moving away from third-party analytics. I wanted a self-hosted, privacy-first way to track post popularity. I chose **better-sqlite3** to manage a local database directly on the VPS.
+I wanted to track post popularity, so I chose **better-sqlite3** to manage a local database directly on the VPS.
 
 The implementation uses a simple `post_views` table:
 
@@ -79,7 +79,7 @@ theme: {
 }
 ```
 
-## The "Hybrid" Repository Strategy
+## The "Legacy" Repository Strategy
 
 A unique aspect of this project is that it isn't just a rewrite; it's a migration. I've preserved the entire original React implementation in a `legacy-react/` directory. 
 
@@ -87,4 +87,4 @@ It serves as a benchmark. By comparing the two, I can see the performance gains:
 
 ## Conclusion
 
-Rewriting this site wasn't about following a trend. It was about aligning my digital home with my engineering philosophy: **Simplicity is the ultimate sophistication.** By stripping away the layers of modern web abstraction and returning to fundamentals—SQLite, Static HTML, and clean Typography—I've built a platform that is as efficient as the code I write.
+Rewriting this site was about aligning my digital home with my engineering philosophy: **Simplicity is the ultimate sophistication.**

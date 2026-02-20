@@ -12,7 +12,7 @@ I recently decided to move my portfolio from Netlify to a self-managed VPS to be
 
 ## How it Started
 
-After provisioning my GCP VM, I updated the system and installed Nginx:
+After provisioning my GCP VM, I ssh-ed into it and updated the system and installed Nginx:
 
 ```bash
 sudo apt update
@@ -30,7 +30,7 @@ The first issue arose immediately: compatibility. I had to downgrade to Node.js 
 
 ## The Challenge: Memory Constraints
 
-The root cause was RAM. My instance had only 1GB of RAM. During the build process, Node.js attempts to load the entire application into memory for optimization, hitting the system limit and causing the process to freeze or be killed by the OS.
+The root cause was RAM. My instance had only 1GB of RAM (extremely cheap). During the build process, Node.js attempts to load the entire application into memory for optimization, hitting the system limit and causing the process to freeze or be killed by the OS.
 
 ### Step 1: Creating Swap Space
 
@@ -81,3 +81,5 @@ sudo certbot --nginx
 ```
 
 I enabled the "Redirect" option to ensure all traffic is automatically upgraded to HTTPS. The result is a fully self-hosted, secure portfolio running on a budget-friendly instance.
+
+*Note: Gemini was extremely helpful throughout this entire migration process.*
