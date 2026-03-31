@@ -22,7 +22,7 @@ const isPlaying = track?.isPlaying;
       <div class="flex-1 space-y-1">
         <div class="flex items-center justify-between">
           <span class="text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-bold">
-            {isPlaying ? "Currently Listening" : "Recently Played"}
+            {track.type === 'podcast' ? (isPlaying ? "Currently Tuning In" : "Recent Podcast") : (isPlaying ? "Currently Listening" : "Recently Played")}
           </span>
           <a href={track.url} target="_blank" class="text-[10px] text-teal-600 dark:text-teal-400 hover:underline font-mono">
             last.fm &rarr;
