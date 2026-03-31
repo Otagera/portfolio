@@ -1,0 +1,16 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Intro from '../components/Intro.astro';
+import Feed from '../components/Feed.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="Othniel Agera | Backend Engineer">
+	<Header />
+	<div class="space-y-32">
+		<Intro />
+		<Feed writingLimit={3} />
+	</div>
+	<Footer />
+</BaseLayout>

@@ -1,0 +1,83 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { getAllViews } from '../../lib/db';
+
+const writing = (await getCollection('writing', ({ data }) => {
+	return import.meta.env.PROD ? data.draft !== true : true;
+})).sort((a, b) => {
+	const dateDiff = b.data.date.getTime() - a.data.date.getTime();
+	if (dateDiff !== 0) return dateDiff;
+	return a.data.title.localeCompare(b.data.title);
+});
+const views = getAllViews();
+
+const formatDate = (date: Date) => {
+	return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+};
+---
+
+<BaseLayout title="Writing | Othniel Agera">
+  <Header />
+  <section class="pt-12 space-y-12">
+    <div class="space-y-4">
+      <div class="text-teal-600 dark:text-teal-400 font-bold">$ ls -la writing/</div>
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-white transition-colors">Writing</h1>
+      <p class="text-gray-600 dark:text-gray-400 max-w-[60ch] transition-colors">
+        Technical deep dives, system design notes, and engineering logs. 
+        A collection of thoughts on building scalable software.
+      </p>
+    </div>
+
+    <div class="space-y-16 pt-8">
+      {writing.map((post) => (
+        <a href={`/writing/${post.slug}`} class="block group">
+          <article>
+            <div class="flex justify-between items-baseline mb-1">
+              <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors">
+                {post.data.title}
+              </h3>
+              <div class="flex items-center space-x-2 text-xs font-mono text-gray-500 dark:text-gray-700 transition-colors">
+                <time class="whitespace-nowrap">
+                  {formatDate(post.data.date)}
+                </time>
+                {post.data.updatedDate && <span class="italic text-[10px] opacity-70">(Edited)</span>}
+                <span class="text-gray-300 dark:text-gray-800 mx-1">•</span>
+                <span class="text-[10px] whitespace-nowrap">
+                  {views[post.slug] || 0} views
+                </span>
+              </div>
+            </div>
+            <p class="text-gray-600 dark:text-gray-500 leading-relaxed mb-4 group-hover:text-gray-900 dark:group-hover:text-gray-400 transition-colors">
+              {post.data.summary}
+            </p>
+            <div class="flex items-center justify-between">
+              <div class="flex gap-3">
+                {post.data.tags?.map(tag => (
+                  <span 
+                    onclick="event.preventDefault(); event.stopPropagation(); window.location.href='/writing/tag/' + this.textContent.trim().substring(1)"
+                    class="text-[10px] text-gray-500 dark:text-gray-600 font-mono italic hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer transition-colors"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+              <div class="text-[10px] text-teal-700 dark:text-teal-600 font-bold uppercase tracking-widest transition-colors">
+                {post.data.readTime} READ
+              </div>
+            </div>
+          </article>
+        </a>
+      ))}
+    </div>
+
+    <div class="pt-20">
+      <a href="/" class="text-teal-600 dark:text-teal-400 hover:opacity-80 transition-all font-mono">
+        $ cd ..
+      </a>
+    </div>
+  </section>
+  <Footer />
+</BaseLayout>
