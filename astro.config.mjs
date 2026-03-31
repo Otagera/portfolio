@@ -5,7 +5,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 
 export default defineConfig({
-  site: 'https://othnielagera.netlify.app',
+  site: 'https://otagera.xyz',
   integrations: [tailwind()],
   output: 'server',
   adapter: node({
