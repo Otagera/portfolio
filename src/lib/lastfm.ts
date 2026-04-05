@@ -22,6 +22,10 @@ interface LastfmResponse {
 }
 
 export async function getNowPlaying(user: string, apiKey: string): Promise<NowPlayingTrack | null> {
+  // Bypassing SSL check for corporate/intercepting proxies (SELF_SIGNED_CERT_IN_CHAIN)
+  if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  }
   try {
     const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${user}&api_key=${apiKey}&format=json&limit=1`;
     const response = await fetch(url);
