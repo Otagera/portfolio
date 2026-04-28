@@ -6,6 +6,11 @@ import Footer from '../../components/Footer.astro';
 import { getViews, incrementViews } from '../../lib/db';
 
 const { slug } = Astro.params;
+
+if (!slug) {
+	return Astro.redirect('/404');
+}
+
 const entry = await getEntry('writing', slug);
 
 if (!entry || (import.meta.env.PROD && entry.data.draft)) {
