@@ -24,11 +24,11 @@
 		"year": "2025"
 	},
 	{
-		"title": "Anoda Facematch",
-		"desc": "An intelligent photo management system featuring automated face detection and recognition. It allows users to organize photos into albums and search for specific individuals using advanced facial matching.",
+		"title": "Lumina",
+		"desc": "Lumina is an AI Intelligence Layer for your photo library. It allows users to organize photos, perform advanced face recognition, and host Collaborative Events. The platform separates AI compute from physical storage, offering a Bring Your Own Storage (BYOS) model that gives users full control over their data while leveraging powerful facial recognition and search.",
 		"task": "Develop a face-recognition-powered photo gallery with real-time updates and efficient background processing.",
-		"tech": ["React", "ElysiaJS", "Bun", "PostgreSQL", "Redis", "Tailwind CSS"],
-		"link": "https://github.com/Otagera/anoda",
-		"year": "2025"
+		"tech": ["React", "ElysiaJS", "Bun", "PostgreSQL", "Python (face recognition)"],
+		"link": "https://github.com/Otagera/lumina",
+		"year": "2026"
 	}
 ]
