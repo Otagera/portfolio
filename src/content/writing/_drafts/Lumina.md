@@ -158,7 +158,7 @@ The worker calls the FastAPI service, which extracts **512-dimensional embedding
 
 ---
 
-# Wait—why no pgvector?
+# PostgreSQL Face Similarity Search Without pgvector
 
 Most systems would reach for `pgvector`. I deliberately chose not to, ensuring the core logic remains **infrastructure-agnostic**. Lumina can run on *any* standard PostgreSQL instance (Neon, Supabase, or self-hosted) without custom extensions.
 

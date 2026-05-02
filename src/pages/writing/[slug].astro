@@ -28,7 +28,10 @@ const formatDate = (date: Date) => {
 };
 ---
 
-<BaseLayout title={`${entry.data.title} | Othniel Agera`}>
+<BaseLayout 
+  title={`${entry.data.title} | Othniel Agera`}
+  description={entry.data.summary}
+>
   <Header />
   <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors">
     <div class="mb-12">
