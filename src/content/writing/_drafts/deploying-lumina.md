@@ -4,7 +4,6 @@ date: "2026-05-02"
 readTime: "8 min"
 summary: "How I deployed a complex monorepo stack for $4/month using Coolify, while overcoming OOM crashes and configuration drift."
 tags: ["deployment", "hetzner", "coolify", "docker", "devops"]
-draft: true
 ---
 
 # Deploying Lumina: A Scalable AI Photo App on Hetzner & Coolify

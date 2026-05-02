@@ -4,7 +4,6 @@ date: "2026-04-30"
 readTime: "9 min"
 summary: "Designing a distributed face-matching system using Bun, FastAPI, and PostgreSQL—without relying on pgvector."
 tags: ["javascript", "python", "monorepo", "ai", "face-recognition", "postgresql"]
-draft: true
 ---
 
 # Lumina: Building a Collaborative AI Photo Intelligence Layer
