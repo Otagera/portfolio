@@ -29,3 +29,7 @@ Thumbs.db
 
 # Optional: Legacy code (Uncomment if you want to keep it out of git)
 # legacy-react/
+
+# Generated OG Images (generated during build)
+public/og-image.png
+public/og-images/

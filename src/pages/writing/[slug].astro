@@ -32,6 +32,33 @@ const formatDate = (date: Date) => {
   title={`${entry.data.title} | Othniel Agera`}
   description={entry.data.summary}
 >
+  <Fragment slot="head">
+    <meta property="og:type" content="article" />
+    <meta property="og:image" content={new URL(`/og-images/${slug}.png`, Astro.site).href} />
+    <meta property="twitter:image" content={new URL(`/og-images/${slug}.png`, Astro.site).href} />
+    <meta property="article:published_time" content={entry.data.date.toISOString()} />
+    {entry.data.updatedDate && <meta property="article:modified_time" content={entry.data.updatedDate.toISOString()} />}
+    <meta property="article:author" content="Othniel Agera" />
+    {entry.data.tags?.map(tag => <meta property="article:tag" content={tag} />)}
+    
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": entry.data.title,
+      "datePublished": entry.data.date.toISOString(),
+      "dateModified": entry.data.updatedDate?.toISOString() || entry.data.date.toISOString(),
+      "description": entry.data.summary,
+      "author": {
+        "@type": "Person",
+        "name": "Othniel Agera"
+      },
+      "url": Astro.url.href,
+      "image": new URL(`/og-images/${slug}.png`, Astro.site).href,
+      "keywords": entry.data.tags || [],
+      "readTime": entry.data.readTime
+    })} />
+  </Fragment>
+  
   <Header />
   <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors">
     <div class="mb-12">

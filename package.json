@@ -5,9 +5,10 @@
 	"scripts": {
 		"dev": "astro dev",
 		"start": "astro dev",
-		"build": "astro build",
+		"build": "node scripts/generate-og-image.js && node scripts/generate-blog-og-images.js && astro build",
 		"preview": "astro preview",
 		"astro": "astro",
+		"generate:og": "node scripts/generate-og-image.js && node scripts/generate-blog-og-images.js",
 		"lint": "biome lint .",
 		"format": "biome format . --write",
 		"check": "biome check --write ."
@@ -15,12 +16,15 @@
 	"dependencies": {
 		"@astrojs/node": "^9.5.3",
 		"@astrojs/rss": "^4.0.15",
+		"@astrojs/sitemap": "^3.7.2",
 		"@astrojs/tailwind": "^5.0.0",
 		"@tailwindcss/typography": "^0.5.19",
 		"astro": "^5.17.2",
 		"better-sqlite3": "^12.6.2",
+		"gray-matter": "^4.0.3",
 		"rehype-katex": "^7.0.1",
 		"remark-math": "^6.0.0",
+		"sharp": "^0.34.5",
 		"tailwindcss": "^3.0.0"
 	},
 	"devDependencies": {

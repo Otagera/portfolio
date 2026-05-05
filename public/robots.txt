@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://otagera.xyz/sitemap.xml

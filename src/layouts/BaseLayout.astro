@@ -13,27 +13,66 @@ const { title, description = "Backend Engineer specializing in distributed syste
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/favicon.png" />
 		<meta name="generator" content={Astro.generator} />
 		
 		<title>{title}</title>
-		<meta name="description" content={description} />
-		<link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+<meta name="description" content={description} />
+<meta name="author" content="Othniel Agera" />
+<link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
 
 		<!-- Open Graph / Facebook -->
 		<meta property="og:type" content="website" />
 		<meta property="og:url" content={Astro.url} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
-		<meta property="og:image" content={new URL('/favicon.png', Astro.site)} />
+		<meta property="og:image" content={new URL('/og-image.png', Astro.site)} />
 
 		<!-- Twitter -->
 		<meta property="twitter:card" content="summary_large_image" />
 		<meta property="twitter:url" content={Astro.url} />
-		<meta property="twitter:title" content={title} />
-		<meta property="twitter:description" content={description} />
-		<meta property="twitter:image" content={new URL('/favicon.png', Astro.site)} />
+<meta property="twitter:title" content={title} />
+<meta property="twitter:description" content={description} />
+<meta property="twitter:site" content="@LeoLenzo_37" />
+<meta property="twitter:creator" content="@LeoLenzo_37" />
 
-		<link rel="preconnect" href="https://fonts.googleapis.com">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "name": "Othniel Agera",
+      "jobTitle": "Backend Engineer",
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Flutterwave"
+      },
+      "url": "https://otagera.xyz",
+      "description": "Backend Engineer specializing in distributed systems, performance optimization, and scalable architectures.",
+      "sameAs": [
+        "https://github.com/Otagera",
+        "https://linkedin.com/in/othniel-agera-751a0237",
+        "https://twitter.com/LeoLenzo_37"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "name": "Othniel Agera",
+      "url": "https://otagera.xyz",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://otagera.xyz/writing?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+  ]
+}
+</script>
+
+<slot name="head" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
 		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">

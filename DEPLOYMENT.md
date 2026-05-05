@@ -39,7 +39,7 @@ sudo nginx -t && sudo systemctl reload nginx
 # 1. Install dependencies
 npm install
 
-# 2. Build the project (creates the dist/ folder)
+# 2. Build the project (creates the dist/ folder and generates OG images for all blog posts)
 npm run build
 
 # 3. Start with PM2
@@ -61,7 +61,7 @@ git pull origin main
 ```
 
 ### Step 2: Rebuild the application
-Astro SSR requires a fresh build to generate the updated server-side logic.
+Astro SSR requires a fresh build to generate the updated server-side logic. This will also regenerate OG images for any new or updated blog posts.
 ```bash
 npm run build
 ```
@@ -84,3 +84,4 @@ pm2 restart portfolio
 | `pm2 logs portfolio` | See real-time server logs (useful for debugging) |
 | `pm2 stop portfolio` | Stop the server |
 | `sudo systemctl status nginx` | Check Nginx status |
+| `npm run generate:og` | Manually regenerate all OG images (main site + blog posts) |
