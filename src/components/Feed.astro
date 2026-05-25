@@ -34,7 +34,7 @@ const formatDate = (date: Date) => {
     <div class="space-y-12">
       {projects.map((project) => (
         <div class="group border-l-2 border-gray-200 dark:border-gray-800 pl-6 py-2 hover:border-teal-600 dark:hover:border-teal-400 transition-all duration-200">
-          <div class="flex justify-between items-baseline mb-2">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2 gap-y-1 sm:gap-y-0">
             <a href={project.link} target="_blank" class="text-lg font-bold text-teal-700 dark:text-teal-300 hover:text-teal-600 dark:hover:text-teal-200 transition-all">
               {project.title}
             </a>
@@ -62,7 +62,7 @@ const formatDate = (date: Date) => {
       {writing.map((post) => (
         <a href={`/writing/${post.slug}`} class="block group">
           <article>
-            <div class="flex justify-between items-baseline mb-1">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-1 gap-y-1 sm:gap-y-0">
               <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors">
                 {post.data.title}
               </h3>
@@ -80,8 +80,8 @@ const formatDate = (date: Date) => {
             <p class="text-gray-600 dark:text-gray-400 text-sm mb-3 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
               {post.data.summary}
             </p>
-            <div class="flex items-center justify-between">
-              <div class="flex gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-y-3 sm:gap-y-0">
+              <div class="flex flex-wrap gap-x-3 gap-y-1">
                 {post.data.tags?.map(tag => (
                   <span 
                     onclick="arguments[0].preventDefault(); arguments[0].stopPropagation(); window.location.href='/writing/tag/' + this.textContent.trim().substring(1)"
