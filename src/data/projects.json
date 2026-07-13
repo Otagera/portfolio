@@ -30,5 +30,21 @@
 		"tech": ["React", "ElysiaJS", "Bun", "PostgreSQL", "Python (face recognition)"],
 		"link": "https://github.com/Otagera/lumina",
 		"year": "2026"
+	},
+	{
+		"title": "Indyer",
+		"desc": "A daily guess-the-name puzzle about notable Nigerians, styled after a newsprint archive. Players work through source-cited clues under a strikethrough guess tracker, then share a server-rendered results card.",
+		"task": "Build a Wordle-style daily puzzle game with fuzzy-matched guessing, seeded daily selection, and a shareable SVG/PNG results card.",
+		"tech": ["TypeScript", "Hono", "React", "Drizzle ORM", "PostgreSQL", "Tailwind CSS"],
+		"link": "https://github.com/Otagera/indyer",
+		"year": "2026"
+	},
+	{
+		"title": "Lagos Governor Sim",
+		"desc": "A decision-driven governance simulation set in Lagos, Nigeria — think Frostpunk, not SimCity. Players serve a 4-year term as Governor, making choices from event cards that cascade into political, fiscal, and social consequences weeks later.",
+		"task": "Model a political economy simulation with cascading stat systems, faction dynamics, and multi-layer decision chains across a 208-week term.",
+		"tech": ["TypeScript", "React", "Zustand", "Rust", "Axum", "SeaORM", "PostgreSQL"],
+		"link": "https://github.com/Otagera/lag-sim",
+		"year": "2026"
 	}
 ]
