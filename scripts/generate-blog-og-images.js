@@ -184,7 +184,7 @@ async function main() {
       continue;
     }
     
-    const slug = file.replace(/\.md$/, '');
+    const slug = file.replace(/\.md$/, '').toLowerCase();
     const post = { slug, data };
     
     await generateBlogOGImage(post);
