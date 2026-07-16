@@ -4,7 +4,7 @@ date: "2026-07-13"
 readTime: "7 min"
 summary: "How I stopped rebuilding four Docker images on every commit — and the five annoying bugs that got in the way of a clean CI pipeline."
 tags: ["ci-cd", "github-actions", "docker", "coolify", "devops", "monorepo"]
-draft: true
+draft: false
 ---
 
 # Selective CI Builds for a Monorepo with GitHub Actions + Coolify

@@ -25,16 +25,27 @@ A specialized skill for technical editing and metadata validation. It ensures al
 3. Ask Gemini to "Review my latest blog post" or "Check the frontmatter for my new entry".
 
 
-$ cat writing/{slug}.md
-[Title line 1]
-[Title line 2] (if long)
-[Title line 3] (if very long, then ...)
-                           ↓ 40px gap
-[Date • Read time]         ↓ 50px gap  
-# tag1 • tag2 • tag3       ↓
-────────────────────────
-otagera.xyz/writing/{slug}
-You can preview the updated images at http://localhost:4321/og-images/{slug}.png with the dev server running!
+Each post card shows:
+
+- Title (1-3 lines with ellipsis overflow)
+- Date • Read time
+- Tags
+- Link to `https://otagera.xyz/writing/{slug}`
+
+### OG Images
+
+OG images are generated via Node scripts using `sharp` + inline SVG templating.
+
+- **Per-post:** `scripts/generate-blog-og-images.js` — creates `public/og-images/{slug}.png`
+- **Default:** `scripts/generate-og-image.js` — creates `public/og-image.png`
+
+To generate OG images for a new post:
+
+```bash
+npm run generate:og
+```
+
+This is also part of the build command (`npm run build`).
 
 ## 🛠️ Development
 
