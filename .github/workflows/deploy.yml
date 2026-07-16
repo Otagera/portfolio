@@ -17,10 +17,20 @@ jobs:
           script: |
             set -e
             cd ~/portfolio
-            git fetch origin main
+            for i in 1 2 3; do
+              git fetch origin main && break
+              echo "git fetch failed (attempt $i/3), retrying in 5s..."
+              sleep 5
+              if [ "$i" = 3 ]; then
+                echo "git fetch failed after 3 attempts"
+                exit 1
+              fi
+            done
             git reset --hard origin/main
             source ~/.nvm/nvm.sh
             nvm use 24
             npm ci
             npm run build
             pm2 reload portfolio
+            sleep 3
+            pm2 describe portfolio | grep -q "status.*online" || { echo "portfolio process is not online after reload"; pm2 logs portfolio --lines 50 --nostream; exit 1; }
