@@ -75,6 +75,8 @@ jobs:
           command_timeout: 2m
           script: |
             set -e
+            source ~/.nvm/nvm.sh
+            nvm use 24
             pm2 reload portfolio
             sleep 3
             pm2 describe portfolio | grep -q "status.*online" || { echo "portfolio process is not online after reload"; pm2 logs portfolio --lines 50 --nostream; exit 1; }
