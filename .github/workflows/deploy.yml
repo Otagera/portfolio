@@ -5,32 +5,74 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy over SSH
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Prune to production dependencies
+        run: npm prune --omit=dev
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: |
+            dist
+            node_modules
+            package.json
+            package-lock.json
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: build
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync build to server
+        run: |
+          rsync -avz --delete \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='portfolio.db*' \
+            --exclude='.git' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            build/ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:~/portfolio/"
+
+      - name: Reload app
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 30s
+          command_timeout: 2m
           script: |
             set -e
-            cd ~/portfolio
-            for i in 1 2 3; do
-              git fetch origin main && break
-              echo "git fetch failed (attempt $i/3), retrying in 5s..."
-              sleep 5
-              if [ "$i" = 3 ]; then
-                echo "git fetch failed after 3 attempts"
-                exit 1
-              fi
-            done
-            git reset --hard origin/main
-            source ~/.nvm/nvm.sh
-            nvm use 24
-            npm ci
-            npm run build
             pm2 reload portfolio
             sleep 3
             pm2 describe portfolio | grep -q "status.*online" || { echo "portfolio process is not online after reload"; pm2 logs portfolio --lines 50 --nostream; exit 1; }
