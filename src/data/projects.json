@@ -7,7 +7,8 @@
 		"link": "https://github.com/Otagera/strata-ts",
 		"year": "2026",
 		"featured": true,
-		"writeup": "/writing/engineering-stratadb"
+		"writeup": "/writing/engineering-stratadb",
+		"slug": "strata-db"
 	},
 	{
 		"title": "Letterboxd CLI (My Movies)",
@@ -33,7 +34,8 @@
 		"link": "https://github.com/Otagera/lumina",
 		"year": "2026",
 		"featured": true,
-		"writeup": "/writing/lumina"
+		"writeup": "/writing/lumina",
+		"slug": "lumina"
 	},
 	{
 		"title": "Indyer",
