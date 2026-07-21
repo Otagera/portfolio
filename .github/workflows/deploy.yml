@@ -21,6 +21,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_USERNAME: ${{ secrets.LASTFM_USERNAME }}
 
       - name: Prune to production dependencies
         run: npm prune --omit=dev
