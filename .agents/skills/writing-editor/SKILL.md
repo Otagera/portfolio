@@ -34,3 +34,11 @@ When asked to edit or review a writing entry:
 - **Conciseness**: Technical readers value brevity. Avoid fluff.
 - **Clarity**: Explain complex concepts simply but without losing technical depth.
 - **Formatting**: Use standard Markdown. Ensure code blocks have language identifiers (e.g., ```typescript).
+
+## Voice
+
+Apply these rules when drafting or editing prose.
+
+- **No em dashes**: Never use em dashes (`—`) in drafted prose. Substitute with commas, periods, parentheses, or rewrite the sentence. Hyphens (`-`) and en dashes (`–`) are fine.
+- **Phrases to avoid**: "I'm passionate about", "synergize", "10x".
+- **Tone**: Passionate but never gushing. A deep thinker without being pretentious.

@@ -2,43 +2,45 @@
 title: "Selective CI Builds for a Monorepo with GitHub Actions + Coolify"
 date: "2026-07-13"
 readTime: "7 min"
-summary: "How I stopped rebuilding four Docker images on every commit — and the five annoying bugs that got in the way of a clean CI pipeline."
+summary: "How I stopped rebuilding four Docker images on every commit, and the five annoying bugs that got in the way of a clean CI pipeline."
 tags: ["ci-cd", "github-actions", "docker", "coolify", "devops", "monorepo"]
 draft: false
 ---
 
 # Selective CI Builds for a Monorepo with GitHub Actions + Coolify
 
-I stopped rebuilding four Docker images on every commit — here's how, and the five annoying bugs that got in the way.
+Here is how, with the help of AI, we stopped rebuilding four Docker images on every commit, and the five annoying bugs that got in the way.
 
 ---
 
 ## The Setup
 
-Currently Lumina is setup as a Bun monorepo with four separate services:
+Currently [Lumina](https://lumina.otagera.xyz/) is set up as a Bun monorepo with four separate services:
 
-| Service | Language | What it does |
-|---|---|---|
-| `api` | Elysia JS (Bun) | REST API, auth, album management |
-| `worker` | Bun | Background jobs, image processing |
-| `dashboard` | React/Vite | Frontend client |
-| `ai_service` | Python/FastAPI | Face recognition, CLIP semantic search |
+| Service      | Language        | What it does                           |
+| ------------ | --------------- | -------------------------------------- |
+| `api`        | Elysia JS (Bun) | REST API, auth, album management       |
+| `worker`     | Bun             | Background jobs, image processing      |
+| `dashboard`  | React/Vite      | Frontend client                        |
+| `ai_service` | Python/FastAPI  | Face recognition, CLIP semantic search |
 
-Production runs on a single VPS managed by [Coolify](https://coolify.io) — a self-hosted PaaS that wraps Docker Compose.
+Production runs on a single VPS (Hetzner CX23 - 2 vCPU, 4 GB RAM, <span class="ann ann-n" data-note="remember this number">40 GB Disk</span> local) managed by [Coolify](https://coolify.io) (a self-hosted PaaS that wraps Docker Compose).
 
 ---
 
 ## The Problem
 
-Coolify's default behaviour when you connect it to a git repo is simple: on every push, run `docker compose build --no-cache` and restart. That works fine when you have one service. With four, it means:
+So Coolify's default behaviour when you connect it to a git repo is simple: on every push, run `docker compose build --no-cache` and restart. That works fine when you have one service or maybe two, but with four, it means:
 
 - A one-line CSS fix in `apps/client` triggers a full Python pip install for the AI service
-- The AI service installs PyTorch, InsightFace, and a CLIP model — that's several minutes and ~3 GB every single time
+
+- The AI service installs PyTorch, InsightFace, and a CLIP model. That's several minutes and \~3 GB every single time
+
 - Every build runs from scratch because of `--no-cache`
 
 This hit me hard when the VPS ran completely out of disk space mid-deploy:
 
-```
+```text
 ERROR: failed to build: [Errno 28] No space left on device
 ```
 
@@ -50,7 +52,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 ```
 
-The `--mount=type=cache` flag persists the cache between BuildKit runs — but Coolify's `--no-cache` flag bypasses the layer cache, not the mount cache. So the pip download cache kept growing without bound, never getting pruned. Fixed by switching to `--no-cache-dir`:
+The `--mount=type=cache` flag persists the cache between BuildKit runs but Coolify's `--no-cache` flag bypasses the layer cache, not the mount cache. So the pip download cache kept growing without bound, never getting pruned. Fixed by switching to `--no-cache-dir`:
 
 ```dockerfile
 RUN pip install --no-cache-dir -r requirements.txt
@@ -62,18 +64,22 @@ But the deeper fix that made the most sense was rethinking the whole build strat
 
 ## The Solution
 
-Instead of letting Coolify build images on the VPS, I moved builds to GitHub Actions and had Coolify pull pre-built images from GHCR (GitHub Container Registry).
+Instead of letting Coolify build images on the VPS, we moved builds to GitHub Actions and had Coolify pull pre-built images from GHCR (GitHub Container Registry).
 
 The flow:
 
-```
+```text
 git push → GitHub Actions → build only changed services → push to GHCR → ping Coolify webhook → Coolify pulls new images → restart containers
 ```
 
 Each service gets its own image:
+
 - `ghcr.io/otagera/lumina-api:latest`
+
 - `ghcr.io/otagera/lumina-worker:latest`
+
 - `ghcr.io/otagera/lumina-dashboard:latest`
+
 - `ghcr.io/otagera/lumina-ai:latest`
 
 Coolify's `docker-compose.yml` changes from `build:` to `image:` + `pull_policy: always`:
@@ -91,7 +97,7 @@ api:
   pull_policy: always
 ```
 
-Now Coolify never builds anything — it only pulls.
+Now Coolify never builds anything; it just pulls what has been built from GH.
 
 ---
 
@@ -139,11 +145,11 @@ jobs:
               - 'requirements.txt'
 ```
 
-Note that `packages/**` is included for all JS services because shared packages live there — a change to a shared utility should rebuild anything that depends on it.
+Note that `packages/**` is included for all JS services because shared packages live there so a change to a shared utility should rebuild anything that depends on it.
 
 ### 2. Conditional build jobs
 
-Each service has its own job that only runs when its filter fires — or when you manually force a full rebuild:
+Each service has its own job that only runs when its filter fires or when you manually force a full rebuild:
 
 ```yaml
 build-api:
@@ -177,7 +183,7 @@ The GHA layer cache (`type=gha`) means even when a service does rebuild, layers 
 
 ### 3. Deploy only if something actually built
 
-The deploy job runs after all four build jobs, but only if at least one succeeded. The `always()` guard is required — without it, skipped jobs count as "failed" and would prevent deploy from running:
+The deploy job runs after all four build jobs, but only if at least one succeeded. The `always()` guard is required. Without it, skipped jobs count as "failed" and would prevent deploy from running:
 
 ```yaml
 deploy:
@@ -197,8 +203,10 @@ deploy:
 ```
 
 Two GitHub secrets required:
-- `COOLIFY_WEBHOOK_URL` — from Coolify app → **Webhooks tab** → Deploy Webhook URL
-- `COOLIFY_TOKEN` — from Coolify → **Profile → API Tokens** (set scope to **deploy** only, 1 year expiry)
+
+- `COOLIFY_WEBHOOK_URL`: from Coolify app → **Webhooks tab** → Deploy Webhook URL
+
+- `COOLIFY_TOKEN`: from Coolify → **Profile → API Tokens** (set scope to **deploy** only, 1 year expiry)
 
 ---
 
@@ -206,7 +214,7 @@ Two GitHub secrets required:
 
 ### 1. VPS disk exhaustion from pip cache
 
-Already described above. The short version: `--mount=type=cache` and `docker compose build --no-cache` are not friends. The cache mount persists across `--no-cache` runs and grows indefinitely. Switching to `--no-cache-dir` in the pip install fixed it.
+As I have already described above. The short version: `--mount=type=cache` and `docker compose build --no-cache` are not friends. The cache mount persists across `--no-cache` runs and grows indefinitely. Switching to `--no-cache-dir` in the pip install fixed it.
 
 Emergency cleanup when it happened: `docker system prune -af --volumes` on the VPS.
 
@@ -214,7 +222,7 @@ Emergency cleanup when it happened: `docker system prune -af --volumes` on the V
 
 After fixing the disk issue, the log shipper (Vector) started throwing:
 
-```
+```text
 ERROR vector::cli: Configuration error. error=Is a directory (os error 21)
 ```
 
@@ -243,9 +251,9 @@ The workflow originally used `${{ github.repository_owner }}` directly in image 
 tags: ghcr.io/${{ github.repository_owner }}/lumina-api:latest
 ```
 
-`github.repository_owner` preserves the casing of your GitHub username. Mine is `Otagera` — capital O. GHCR rejects any tag that isn't fully lowercase:
+`github.repository_owner` preserves the casing of your GitHub username. Mine is `Otagera` with a capital O (very important). GHCR rejects any tag that isn't fully lowercase:
 
-```
+```text
 ERROR: failed to build: invalid tag "ghcr.io/Otagera/lumina-api:latest":
   repository name must be lowercase
 ```
@@ -261,7 +269,7 @@ Then reference `${{ env.OWNER }}` in the tags instead.
 
 ### 4. paths-filter silently returns false without full git history
 
-On the first run, `dorny/paths-filter` was outputting `false` for everything — even though files had clearly changed. The cause: `actions/checkout@v4` defaults to `fetch-depth: 1` (shallow clone), so `paths-filter` couldn't find the base commit to diff against.
+On the first run, `dorny/paths-filter` was outputting `false` for everything even though files had clearly changed. The cause: `actions/checkout@v4` defaults to `fetch-depth: 1` (shallow clone), so `paths-filter` couldn't find the base commit to diff against.
 
 Fix: `fetch-depth: 0` in the checkout step of the `changes` job.
 
@@ -274,34 +282,34 @@ curl -fsSL -X GET "$COOLIFY_WEBHOOK_URL" \
   -H "Authorization: Bearer $COOLIFY_TOKEN"
 ```
 
-The API token lives at Coolify → Profile → API Tokens. Set scope to **deploy** only — no reason to give CI write access to anything else.
+The API token lives at Coolify → Profile → API Tokens. Set scope to **deploy** only. No reason to give CI write access to anything else.
 
 ---
 
 ## The End Result
 
-| Before | After |
-|---|---|
-| Every push rebuilds all 4 services | Only changed services rebuild |
+| Before                                  | After                                      |
+| --------------------------------------- | ------------------------------------------ |
+| Every push rebuilds all 4 services      | Only changed services rebuild              |
 | AI service pip install on every CSS fix | AI rebuilds only when `apps/ai/**` changes |
-| Builds run on the VPS, consuming disk | Builds run on GitHub's runners |
-| VPS disk exhaustion after a few weeks | VPS only pulls and runs pre-built images |
-| ~8 min deploy for a typo fix | ~45 sec for a frontend-only change |
+| Builds run on the VPS, consuming disk   | Builds run on GitHub's runners             |
+| VPS disk exhaustion after a few weeks   | VPS only pulls and runs pre-built images   |
+| \~8 min deploy for a typo fix           | \~45 sec for a frontend-only change        |
 
-The `workflow_dispatch` with `force_all: boolean` input is the escape hatch — when you need a full rebuild without touching any source files, you can trigger it manually from the GitHub Actions UI.
+The `workflow_dispatch` with `force_all: boolean` input is the escape hatch when you need a full rebuild without touching any source files. You can trigger it manually from the GitHub Actions UI.
 
-Since setting this up for Lumina, I've reused the same pattern — `paths-filter` for change detection, per-service build jobs, GHCR as the pull-through registry — on every monorepo I've shipped since, including one built around a Rust service. The approach doesn't care what language a service is written in; swapping in `docker/build-push-action` with a Rust-specific Dockerfile (and its own `cargo`-aware layer caching) was the only change needed. The `changes` → `build-*` → `deploy` shape stays identical.
+Since setting this up for Lumina, I've reused the same pattern (`paths-filter` for change detection, per-service build jobs, GHCR as the pull-through registry) on every monorepo I've shipped since, including one built around a Rust service. The approach doesn't care what language a service is written in; swapping in `docker/build-push-action` with a Rust-specific Dockerfile (and its own `cargo`-aware layer caching) was the only change needed. The `changes` → `build-*` → `deploy` shape stays identical.
 
 ---
 
 ## Secrets Checklist
 
-| Secret | Where to get it |
-|---|---|
-| `COOLIFY_WEBHOOK_URL` | Coolify app → Webhooks tab → Deploy Webhook |
-| `COOLIFY_TOKEN` | Coolify → Profile → API Tokens (scope: deploy) |
+| Secret                | Where to get it                                |
+| --------------------- | ---------------------------------------------- |
+| `COOLIFY_WEBHOOK_URL` | Coolify app → Webhooks tab → Deploy Webhook    |
+| `COOLIFY_TOKEN`       | Coolify → Profile → API Tokens (scope: deploy) |
 
-`GITHUB_TOKEN` is automatic — no secret needed for pushing to GHCR.
+`GITHUB_TOKEN` is automatic; no secret needed for pushing to GHCR.
 
 ---
 
