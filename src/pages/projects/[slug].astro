@@ -1,0 +1,71 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const { slug } = Astro.params;
+
+if (!slug) {
+	return Astro.redirect('/404');
+}
+
+const entry = await getEntry('projects', slug);
+
+if (!entry) {
+	return Astro.redirect('/404');
+}
+
+const { Content } = await entry.render();
+---
+
+<BaseLayout
+  title={`${entry.data.title} | Othniel Agera`}
+  description={entry.data.summary}
+>
+  <Fragment slot="head">
+    <meta property="og:type" content="article" />
+    <meta property="article:author" content="Othniel Agera" />
+  </Fragment>
+
+  <Header />
+  <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors">
+    <div class="mb-12">
+      <div class="text-teal-600 dark:text-teal-400 mb-4 transition-colors">$ cat projects/{slug}.md</div>
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-y-1 sm:gap-y-0 mb-4">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white transition-colors mb-0">{entry.data.title}</h1>
+        <span class="text-sm text-gray-500 dark:text-gray-500 font-mono">{entry.data.year}</span>
+      </div>
+
+      <div class="flex flex-wrap gap-3 mb-6 not-prose">
+        {entry.data.tech.map((t) => (
+          <span class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900/50 px-2 py-1 rounded border border-gray-200 dark:border-gray-800 transition-colors">
+            {t}
+          </span>
+        ))}
+      </div>
+
+      <div class="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-bold uppercase tracking-widest not-prose">
+        <a href={entry.data.link} target="_blank" class="text-teal-700 dark:text-teal-400 hover:text-teal-600 dark:hover:text-teal-200 transition-colors">
+          GitHub &rarr;
+        </a>
+        {entry.data.writeup && (
+          <a href={entry.data.writeup} class="text-teal-700 dark:text-teal-400 hover:text-teal-600 dark:hover:text-teal-200 transition-colors">
+            Read the writeup &rarr;
+          </a>
+        )}
+      </div>
+    </div>
+
+    <div class="text-gray-700 dark:text-gray-300 leading-relaxed space-y-6 transition-colors">
+      <Content />
+    </div>
+
+    <div class="mt-20 pt-10 border-t border-gray-200 dark:border-gray-800 transition-colors">
+      <a href="/projects" class="text-teal-600 dark:text-teal-400 hover:opacity-80 transition-colors">
+        $ cd ..
+      </a>
+    </div>
+  </article>
+  <Footer />
+</BaseLayout>
