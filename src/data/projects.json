@@ -5,7 +5,9 @@
 		"task": "Implement core database storage structures (LSM-Trees, SSTables) and a MongoDB-compatible query engine from scratch.",
 		"tech": ["TypeScript", "Bun", "Node.js"],
 		"link": "https://github.com/Otagera/strata-ts",
-		"year": "2026"
+		"year": "2026",
+		"featured": true,
+		"writeup": "/writing/engineering-stratadb"
 	},
 	{
 		"title": "Letterboxd CLI (My Movies)",
@@ -29,7 +31,9 @@
 		"task": "Develop a face-recognition-powered photo gallery with real-time updates and efficient background processing.",
 		"tech": ["React", "ElysiaJS", "Bun", "PostgreSQL", "Python (face recognition)"],
 		"link": "https://github.com/Otagera/lumina",
-		"year": "2026"
+		"year": "2026",
+		"featured": true,
+		"writeup": "/writing/lumina"
 	},
 	{
 		"title": "Indyer",
@@ -37,7 +41,8 @@
 		"task": "Build a Wordle-style daily puzzle game with fuzzy-matched guessing, seeded daily selection, and a shareable SVG/PNG results card.",
 		"tech": ["TypeScript", "Hono", "React", "Drizzle ORM", "PostgreSQL", "Tailwind CSS"],
 		"link": "https://github.com/Otagera/indyer",
-		"year": "2026"
+		"year": "2026",
+		"featured": true
 	},
 	{
 		"title": "Lagos Governor Sim",
