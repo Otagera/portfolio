@@ -9,6 +9,15 @@ export default {
 			fontFamily: {
 				mono: ['JetBrains Mono', 'IBM Plex Mono', 'monospace'],
 			},
+			typography: {
+				DEFAULT: {
+					css: {
+						// Kill the default backtick pseudo-elements around inline code
+						'code::before': { content: 'none' },
+						'code::after': { content: 'none' },
+					},
+				},
+			},
 		},
 	},
 	plugins: [typography],
