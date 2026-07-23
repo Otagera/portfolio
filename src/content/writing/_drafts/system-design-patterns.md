@@ -7,8 +7,6 @@ tags: ["architecture", "distributed-systems", "design"]
 draft: true
 ---
 
-# Distributed System Design Patterns
-
 When building backend systems at scale, choosing <span class="ann ann-n ann-amber" data-note="the whole game, really">the right pattern</span> is crucial.
 
 ## Comparison of Messaging Patterns

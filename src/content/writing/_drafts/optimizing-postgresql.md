@@ -7,8 +7,6 @@ tags: ["database", "postgresql", "performance"]
 draft: true
 ---
 
-# Optimizing PostgreSQL for high-concurrency
-
 To improve performance, we implemented table partitioning. Here is an example of the optimized query structure:
 
 ```sql

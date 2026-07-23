@@ -7,8 +7,6 @@ tags: ["ci-cd", "github-actions", "docker", "coolify", "devops", "monorepo"]
 draft: false
 ---
 
-# Selective CI Builds for a Monorepo with GitHub Actions + Coolify
-
 Here is how, with the help of AI, we stopped rebuilding four Docker images on every commit, and the five annoying bugs that got in the way.
 
 ---
@@ -25,6 +23,14 @@ Currently [Lumina](https://lumina.otagera.xyz/) is set up as a Bun monorepo with
 | `ai_service` | Python/FastAPI  | Face recognition, CLIP semantic search |
 
 Production runs on a single VPS (Hetzner CX23 - 2 vCPU, 4 GB RAM, <span class="ann ann-n" data-note="remember this number">40 GB Disk</span> local) managed by [Coolify](https://coolify.io) (a self-hosted PaaS that wraps Docker Compose).
+
+Before I go further, you might be looking at this and thinking "what is this guy building that needs four services?" Fair question. Here is the reasoning:
+
+- I don't really like server-side rendering, or what Next.js does with it (personal preference, shaped by an early experience doing it with Express). So for most things I keep a separate client (usually React) and server (usually Express, though lately I have been reaching for Rust with Axum).
+- This project needed an AI service in Python, since image recognition is far better supported there, so that became its own service. The last piece was a worker to move image processing off the main server.
+- With Bun in the picture, I wanted to lean into workspaces: keeping every service in one repo, with shared libs and packages they can all reuse. Elysia played a part here too; its end-to-end type safety was a real draw.
+
+So those were the things on my mind.
 
 ---
 

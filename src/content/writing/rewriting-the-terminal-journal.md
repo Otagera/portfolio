@@ -6,8 +6,6 @@ summary: "A deep dive into the technical migration from React to Astro, SQLite-b
 tags: ["web-design", "astro", "journal", "sqlite"]
 ---
 
-# Rewriting the Terminal Journal
-
 My original portfolio was a typical React single-page application (SPA). It used Chakra UI, handled routing on the client side, and featured smooth, animated transitions—the standard way we've been taught to build for the web over the last decade. It was "modern" and "simple" for its time.
 
 But as I spent more time away from frontend work, and with the availability of AI, I thought it would be a good time for a refresh in terminal-style as my taste had shifted. I wanted something that reflected my work: minimalist, high-performance, and fundamentally text-driven.

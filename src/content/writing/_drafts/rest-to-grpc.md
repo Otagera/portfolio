@@ -7,6 +7,4 @@ tags: ["architecture", "grpc", "microservices"]
 draft: true
 ---
 
-# Why I moved from REST to gRPC for internal services
-
 Content coming soon...

@@ -6,8 +6,6 @@ summary: "Moving from Netlify to a 1GB VPS: Tackling memory limits with swap spa
 tags: ["deployment", "react", "linux", "devops"]
 ---
 
-# Deploying React on a Budget
-
 I recently decided to move my portfolio from Netlify to a self-managed VPS to better understand the deployment lifecycle. Transitioning to a cost-effective cloud instance (a small Google Cloud Compute Engine VM) was a great learning experience that came with its own set of technical hurdles.
 
 ## How it Started
