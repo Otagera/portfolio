@@ -6,8 +6,6 @@ summary: "How I deployed a complex monorepo stack for $4/month using Coolify, wh
 tags: ["deployment", "hetzner", "coolify", "docker", "devops"]
 ---
 
-# Deploying Lumina: A Scalable AI Photo App on Hetzner & Coolify
-
 When it comes to deploying side projects, the modern indie hacker is spoiled for choice. I have used platforms like Railway and Render that offer a smooth "git push to deploy" experience. But as your architecture grows—especially when dealing with databases, background workers, and AI services—those managed platforms can quickly burn a hole in your wallet with usage-based billing.
 
 For [Lumina](https://lumina.otagera.xyz/) (an AI-powered photo sharing and face-matching application), I wanted the magic of PaaS. Railway could have worked, but the educational value of managing my own server, plus the absolute cost predictability of a VPS, made me reconsider. Previously, my deployments involved manually SSHing into a GCP instance, running `git pull`, and restarting `pm2`. It was tedious.

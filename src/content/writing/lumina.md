@@ -6,8 +6,6 @@ summary: "Designing a distributed face-matching system using Bun, FastAPI, and P
 tags: ["javascript", "python", "monorepo", "ai", "face-recognition", "postgresql"]
 ---
 
-# Lumina: Building a Collaborative AI Photo Intelligence Layer
-
 [**Live Demo**](https://lumina.otagera.xyz/) | [**GitHub Repository**](https://github.com/Otagera/lumina)
 
 For a long time, I’ve been fascinated by how effortlessly Google Photos groups faces. You upload thousands of images, and somehow it understands *who is who*.

@@ -7,8 +7,6 @@ summary: "A technical post-mortem on building a multi-layered relational engine,
 tags: ["database", "systems", "typescript", "sql"]
 ---
 
-# StrataDB: Engineering a Multi-Layered Database from Scratch
-
 Building a database is the ultimate exercise in systems engineering. I came across [Build Your Own Database](https://www.nan.fyi/database) that explains Key-Value DBs and I started learning with Gemini and the whole thing was demystified. In the process, we built **StrataDB**—a system that starts at the byte level and climbs all the way up to a Relational SQL interface. This post documents the architecture, the "Aha!" moments, and the engineering trade-offs made along the way. It is a constant battle against the limitations of hardware, the unpredictability of crashes, and the inevitable complexity of abstraction. We didn't build **StrataDB** by following a rigid specification; we built it by hitting walls and refactoring our way through them.
 
 This is a technical post-mortem of the journey from a naive file-writer to a multi-layered relational engine with ACID aspirations.
