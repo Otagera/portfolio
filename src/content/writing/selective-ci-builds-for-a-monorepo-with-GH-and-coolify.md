@@ -22,7 +22,7 @@ Currently [Lumina](https://lumina.otagera.xyz/) is set up as a Bun monorepo with
 | `dashboard`  | React/Vite      | Frontend client                        |
 | `ai_service` | Python/FastAPI  | Face recognition, CLIP semantic search |
 
-Production runs on a single VPS (Hetzner CX23 - 2 vCPU, 4 GB RAM, <span class="ann ann-n" data-note="remember this number">40 GB Disk</span> local) managed by [Coolify](https://coolify.io) (a self-hosted PaaS that wraps Docker Compose).
+Production runs on a single VPS (Hetzner CX23 - 2 vCPU, 4 GB RAM, <span class="note"><button type="button" popovertarget="note-disk" class="note-text">40 GB Disk</button><span popover id="note-disk" class="note-body">this runs out later — see the disk exhaustion section</span></span> local) managed by [Coolify](https://coolify.io) (a self-hosted PaaS that wraps Docker Compose).
 
 Before I go further, you might be looking at this and thinking "what is this guy building that needs four services?" Fair question. Here is the reasoning:
 

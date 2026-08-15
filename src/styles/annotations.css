@@ -1,0 +1,110 @@
+/* Sidenotes: an annotated phrase paired with a note.
+   Desktop (>=1280px): the note is always visible, floated into the page
+   margin — a normal in-flow box, popover mechanics disabled entirely.
+   Below that: the native Popover API reveals the note as a small fixed
+   panel, completely outside document flow, so opening it never reflows
+   or shares a text line with the surrounding sentence. No JS: the
+   popovertarget/popover attributes handle show, dismiss-on-outside-click,
+   Escape-to-close, and focus for free. <span popover> (not <div popover>)
+   because <div> is flow content and would force-close the <p> — same
+   reason <details> didn't work earlier; <span> and <button> are
+   phrasing content and don't have that problem. */
+
+.note {
+	--note-color: var(--accent-color, #0d9488);
+	display: inline;
+}
+
+.note-amber { --note-color: #b8751a; }
+.note-blue { --note-color: #3b72c4; }
+.note-green { --note-color: #2f8f5b; }
+.note-red { --note-color: #c45a38; }
+.note-purple { --note-color: #8657c8; }
+
+.note-text {
+	display: inline;
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0;
+	font: inherit;
+	color: var(--note-color);
+	border-bottom: 1px dotted var(--note-color);
+	cursor: pointer;
+}
+.note-text:focus-visible {
+	outline: 1px dashed var(--note-color);
+	outline-offset: 2px;
+}
+.note-text::after {
+	content: "\00a0\203A";
+	font-size: 0.75em;
+	opacity: 0.7;
+}
+
+.note-body {
+	border: none;
+	padding: 0;
+	margin: 0;
+	color: var(--note-color);
+}
+.note-body:popover-open {
+	position: fixed;
+	inset: auto 1rem 1rem 1rem;
+	width: auto;
+	max-width: none;
+	height: auto;
+	margin: 0;
+	border-left: 3px solid var(--note-color);
+	border-radius: 6px;
+	background: var(--bg-color, #fcfaf2);
+	color: var(--note-color);
+	padding: 1rem 1.25rem;
+	box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+	font-size: 0.85rem;
+	font-style: italic;
+	line-height: 1.5;
+}
+
+/* Where supported, anchor the note to the button that opened it (implicit
+   anchor from popovertarget — no per-instance anchor-name needed) instead
+   of pinning it to the viewport edge. */
+@supports (position-area: bottom) {
+	.note-body:popover-open {
+		inset: auto;
+		position-area: bottom;
+		position-try-fallbacks: flip-block;
+		margin: 0.5rem 0 0;
+		width: max-content;
+		max-width: min(280px, 90vw);
+	}
+}
+
+@media (min-width: 1280px) {
+	.note-text {
+		cursor: default;
+		pointer-events: none;
+	}
+	.note-text::after { content: none; }
+
+	.note-body,
+	.note-body:popover-open {
+		display: block !important;
+		position: static !important;
+		inset: auto !important;
+		float: right;
+		clear: right;
+		width: 190px;
+		max-width: 190px;
+		margin: 0 -224px 0.5rem 0.75rem !important;
+		padding: 0 0 0 0.75rem;
+		border: none;
+		border-left: 2px solid var(--note-color);
+		border-radius: 0;
+		background: none;
+		box-shadow: none;
+		font-size: 0.78rem;
+		font-style: normal;
+		line-height: 1.4;
+	}
+}

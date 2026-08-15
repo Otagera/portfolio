@@ -7,7 +7,7 @@ tags: ["architecture", "distributed-systems", "design"]
 draft: true
 ---
 
-When building backend systems at scale, choosing <span class="ann ann-n ann-amber" data-note="the whole game, really">the right pattern</span> is crucial.
+When building backend systems at scale, choosing <span class="note note-amber"><button type="button" popovertarget="note-pattern" class="note-text">the right pattern</button><span popover id="note-pattern" class="note-body">the whole game, really</span></span> is crucial.
 
 ## Comparison of Messaging Patterns
 
