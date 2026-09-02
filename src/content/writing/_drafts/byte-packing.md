@@ -1,0 +1,144 @@
+---
+title: "Byte Packing: Turning a u32 into Four u8s by Hand"
+date: "2026-09-02"
+readTime: "5 min"
+summary: "Hand-rolling u32-to-bytes encoding with right shifts, and why the byte order you pick (big-endian vs little-endian) actually matters."
+tags: ["rust", "bit-manipulation", "encoding", "systems-programming"]
+draft: true
+---
+
+Byte packing takes a number, say a `u32`, and breaks it into its individual `u8` bytes. Here's the bit manipulation behind it, and why the order you pack those bytes in matters.
+
+A quick refresher on the integer types involved:
+
+| **Data Type** | **Bit Width** | **Total Values (Base 10)** | **Minimum Value** | **Maximum Value** |
+| ------------- | ------------- | --------------------------- | ------------------ | ------------------ |
+| **`u8`**      | 8 bits        | **256** (2⁸)                | 0                   | **255**             |
+| **`u16`**     | 16 bits       | **65,536** (2¹⁶)             | 0                   | **65,535**           |
+| **`u32`**     | 32 bits       | **4,294,967,296** (2³²)      | 0                   | **4,294,967,295**    |
+
+We'll focus on `u32`. Laid out as four bytes, it looks like this (all zero for now):
+
+| Byte 3     | Byte 2     | Byte 1     | Byte 0     |
+| ---------- | ---------- | ---------- | ---------- |
+| `00000000` | `00000000` | `00000000` | `00000000` |
+
+## Right shifting
+
+Right shifting moves every bit in a binary number to the right by a specified number of positions. Each shift divides the number by two, with any remainder dropped (floor division).
+
+From here on we'll only show the bits that matter, since a fully populated `u32` would look like this:
+
+| Byte 3      | Byte 2      | Byte 1      | Byte 0      |
+| ----------- | ----------- | ----------- | ----------- |
+| `1111 1111` | `1111 1111` | `1111 1111` | `1111 1111` |
+
+One note on notation: when we write out a byte, the most significant one comes first, `byte 3 -> byte 2 -> byte 1 -> byte 0` (or `byte 1 -> byte 0` if only two bytes have data). This is called big-endian, since the "big end", the largest place value, comes first. The reverse is little-endian.
+
+### Why big-endian
+
+Neither ordering is more "correct." A computer doesn't care which order you pick, as long as whatever decodes the bytes agrees with whatever encoded them. That's the only hard rule: encode and decode have to use the same order, or the numbers come out wrong. You could just as easily write `byte_packing` to emit the least-significant byte first, and it would still work, provided `decode_packed_byte` used the same order.
+
+I picked big-endian for two reasons:
+
+- **It matches how you already read numbers.** Write 300 on paper and the 3 (hundreds, the largest place value) comes first, on the left. Big-endian does the same thing at the byte level: `[0, 0, 1, 44]` reads left to right the same way the number does. Little-endian would print as `[44, 1, 0, 0]`, just as correct, but harder to eyeball in a hex dump.
+- **It's the standard for "bytes on the wire."** Big-endian is often called network byte order, precisely because two machines exchanging multi-byte numbers need to agree on an order, and this has long been the default.
+
+Rust's `u32::to_be_bytes()` is named for exactly this reason (the "be" is "big-endian"). Its sibling, `to_le_bytes()`, produces little-endian, which is what most CPUs (x86, ARM) actually use internally for their own registers and memory, for unrelated performance reasons. Different concern, different convention. We're using big-endian here because it's the more common, more readable choice for a file format.
+
+## Worked examples
+
+Take 8, represented in bits as `00001000`. Since it only occupies **byte 0**, here's the right-shift sequence:
+
+| bit 7 | bit 6 | bit 5 | bit 4 | bit 3 | bit 2 | bit 1 | bit 0 | Base 2 map | In Base 10 |
+| :---- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | :--------: | ---------: |
+| `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   | `0`   |   $$2^3$$  |        `8` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   |   $$2^2$$  |        `4` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   |   $$2^1$$  |        `2` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   |   $$2^0$$  |        `1` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   |  $$None$$  |        `0` |
+
+Right-shifting by 1 is the same as floor-dividing by 2:
+
+```
+8 / 2 = 4
+4 / 2 = 2
+2 / 2 = 1
+1 / 2 = 0.5 ≈ 0
+```
+
+Take another example, 150, represented as `10010110`:
+
+| bit 7 | bit 6 | bit 5 | bit 4 | bit 3 | bit 2 | bit 1 | bit 0 |         Base 2 map        | In Base 10 |
+| :---- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | :-----------------------: | ---------: |
+| `1`   | `0`   | `0`   | `1`   | `0`   | `1`   | `1`   | `0`   | $$2^7 + 2^4 + 2^2 + 2^1$$ |      `150` |
+| `0`   | `1`   | `0`   | `0`   | `1`   | `0`   | `1`   | `1`   | $$2^6 + 2^3 + 2^1 + 2^0$$ |       `75` |
+| `0`   | `0`   | `1`   | `0`   | `0`   | `1`   | `0`   | `1`   |    $$2^5 + 2^2 + 2^0$$    |       `37` |
+| `0`   | `0`   | `0`   | `1`   | `0`   | `0`   | `1`   | `0`   |       $$2^4 + 2^1$$       |       `18` |
+| `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   | `1`   |       $$2^3 + 2^0$$       |        `9` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   |          $$2^2$$          |        `4` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   |          $$2^1$$          |        `2` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   |          $$2^0$$          |        `1` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   |          $$None$$         |        `0` |
+
+```
+150 / 2 = 75
+75 / 2  = 37.5 ≈ 37
+37 / 2  = 18.5 ≈ 18
+18 / 2  = 9
+9 / 2   = 4.5 ≈ 4
+4 / 2   = 2
+2 / 2   = 1
+1 / 2   = 0.5 ≈ 0
+```
+
+In general, shifting right by `i` places gives $\lfloor \frac{n}{2^{i}} \rfloor$ (floor division: drop the remainder, exactly like the examples above). In both examples we shifted by 1 each time. When byte packing, we usually shift by 8, a full byte at a time.
+
+## Putting it together
+
+I've been working on a project that encodes data into bytes and back, and while pairing with Claude Code on it, I decided to hand-roll the encoding step myself rather than reach for the standard library right away. Rust, like most languages, already ships helpers for this in both big-endian and little-endian, but doing it by hand is the fastest way to actually understand what those helpers are doing.
+
+Say we want to convert 300 into a 4-byte array, `bytes = [0u8; 4]`:
+
+| Byte 3      | Byte 2      | Byte 1      | Byte 0      |
+| ----------- | ----------- | ----------- | ----------- |
+| `0000 0000` | `0000 0000` | `0000 0000` | `0000 0000` |
+
+300 in binary is `1 0010 1100`, which spills one bit into a second byte. Written out fully:
+
+|                             | Byte 3      | Byte 2      | Byte 1      | Byte 0              |
+| --------------------------- | ----------- | ----------- | ----------- | -------------------- |
+| Bytes in 8-bit groups        | `0000 0000` | `0000 0000` | `0000 0001` | `0010 1100`          |
+| Base 2 map                   | $$None$$    | $$None$$    | $$2^0$$     | $$2^5 + 2^3 + 2^2$$  |
+| Decimal                       | 0           | 0           | 1           | 44                    |
+
+So `[0, 0, 1, 44]` is the byte representation of 300.
+
+Working this out by hand is a good way to build intuition, but it only handles one number at a time. To pack any `u32`, we need a loop, shifting by 8 for each byte:
+
+```
+300 = 0010 1100 (no shift) = 44 as u8
+(300 >> 8)  = 0000 0001 = 1 as u8
+(300 >> 16) = 0000 0000 = 0 as u8
+(300 >> 24) = 0000 0000 = 0 as u8
+```
+
+In code:
+
+```rust
+pub(crate) fn byte_packing(value: u32) -> [u8; 4] {
+    let mut bytes = [0u8; 4];
+    for i in 0..4 {
+        bytes[i] = (value >> (8 * (3 - i))) as u8;
+    }
+    bytes
+}
+```
+
+That's the whole thing: shift the value right by 0, 8, 16, and 24 bits, truncate each result down to a `u8`, and you've packed a `u32` into four bytes, most significant first.
+
+## References
+
+1. [Right Shift Explained - Bit Manipulation Tutorial](https://youtu.be/rRYwmEG3wJI?si=zv53DwRUNdkpZUhZ) (YouTube)
+
+*Written with Claude Code as a pair-programming/tutoring partner throughout the implementation.*
