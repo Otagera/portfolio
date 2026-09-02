@@ -1,13 +1,13 @@
 ---
 title: "Byte Packing: Turning a u32 into Four u8s by Hand"
 date: "2026-09-02"
-readTime: "5 min"
-summary: "Hand-rolling u32-to-bytes encoding with right shifts, and why the byte order you pick (big-endian vs little-endian) actually matters."
+readTime: "9 min"
+summary: "Hand-rolling u32-to-bytes encoding and back with bit shifts, and why the byte order you pick (big-endian vs little-endian) actually matters."
 tags: ["rust", "bit-manipulation", "encoding", "systems-programming"]
 draft: true
 ---
 
-Byte packing takes a number, say a `u32`, and breaks it into its individual `u8` bytes. Here's the bit manipulation behind it, and why the order you pack those bytes in matters.
+Byte packing takes a number, say a `u32`, and breaks it into its individual `u8` bytes, and back again. Here's the bit manipulation behind it, and why the order you pack those bytes in matters.
 
 A quick refresher on the integer types involved:
 
@@ -23,7 +23,7 @@ We'll focus on `u32`. Laid out as four bytes, it looks like this (all zero for n
 | ---------- | ---------- | ---------- | ---------- |
 | `00000000` | `00000000` | `00000000` | `00000000` |
 
-## Right shifting
+## Right Shifting
 
 Right shifting moves every bit in a binary number to the right by a specified number of positions. Each shift divides the number by two, with any remainder dropped (floor division).
 
@@ -35,7 +35,7 @@ From here on we'll only show the bits that matter, since a fully populated `u32`
 
 One note on notation: when we write out a byte, the most significant one comes first, `byte 3 -> byte 2 -> byte 1 -> byte 0` (or `byte 1 -> byte 0` if only two bytes have data). This is called big-endian, since the "big end", the largest place value, comes first. The reverse is little-endian.
 
-### Why big-endian
+### Why Big-Endian
 
 Neither ordering is more "correct." A computer doesn't care which order you pick, as long as whatever decodes the bytes agrees with whatever encoded them. That's the only hard rule: encode and decode have to use the same order, or the numbers come out wrong. You could just as easily write `byte_packing` to emit the least-significant byte first, and it would still work, provided `decode_packed_byte` used the same order.
 
@@ -46,7 +46,7 @@ I picked big-endian for two reasons:
 
 Rust's `u32::to_be_bytes()` is named for exactly this reason (the "be" is "big-endian"). Its sibling, `to_le_bytes()`, produces little-endian, which is what most CPUs (x86, ARM) actually use internally for their own registers and memory, for unrelated performance reasons. Different concern, different convention. We're using big-endian here because it's the more common, more readable choice for a file format.
 
-## Worked examples
+## Worked Examples
 
 Take 8, represented in bits as `00001000`. Since it only occupies **byte 0**, here's the right-shift sequence:
 
@@ -94,7 +94,7 @@ Take another example, 150, represented as `10010110`:
 
 In general, shifting right by `i` places gives $\lfloor \frac{n}{2^{i}} \rfloor$ (floor division: drop the remainder, exactly like the examples above). In both examples we shifted by 1 each time. When byte packing, we usually shift by 8, a full byte at a time.
 
-## Putting it together
+## Putting It Together
 
 I've been working on a project that encodes data into bytes and back, and while pairing with Claude Code on it, I decided to hand-roll the encoding step myself rather than reach for the standard library right away. Rust, like most languages, already ships helpers for this in both big-endian and little-endian, but doing it by hand is the fastest way to actually understand what those helpers are doing.
 
@@ -136,6 +136,33 @@ pub(crate) fn byte_packing(value: u32) -> [u8; 4] {
 ```
 
 That's the whole thing: shift the value right by 0, 8, 16, and 24 bits, truncate each result down to a `u8`, and you've packed a `u32` into four bytes, most significant first.
+
+## Decoding It Back
+
+Getting the number back out is the mirror image: left shift instead of right, and rebuild instead of truncate.
+
+Left shifting moves bits left, multiplying by two per shift instead of dividing. Since byte 3 holds the most significant bits, it needs to go back to position 24; byte 2 to 16; byte 1 to 8; byte 0 stays put. Using `[0, 0, 1, 44]` from earlier:
+
+```
+(0  as u32) << 24 = 0
+(0  as u32) << 16 = 0
+(1  as u32) << 8  = 256
+(44 as u32) << 0  = 44
+```
+
+Adding those up (or OR-ing them, equivalent here since none of the shifted ranges overlap) gives `0 + 0 + 256 + 44 = 300`, the original number.
+
+```rust
+pub(crate) fn decode_packed_byte(bytes: [u8; 4]) -> u32 {
+    let mut value: u32 = 0;
+    for i in 0..4 {
+        value |= (bytes[i] as u32) << (8 * (3 - i));
+    }
+    value
+}
+```
+
+The cast to `u32` before shifting matters because a `u8` only has 8 bit-positions to begin with so shifting it left just pushes bits off the top and they're lost. Casting up to `u32` first gives the bits 32 positions to land in, so nothing gets discarded when a byte moves up to position 24.
 
 ## References
 
