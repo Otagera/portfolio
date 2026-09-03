@@ -13,14 +13,14 @@ const { seriesId, currentSlug, curriculumHref } = Astro.props;
 // so a draft post can still see itself (and its siblings) in dev.
 const allWriting = await getCollection('writing', ({ data }) => !(import.meta.env.PROD && data.draft));
 
-const parts = allWriting
+const realParts = allWriting
 	.filter((e) => e.data.series?.id === seriesId)
-	.sort((a, b) => a.data.series!.part - b.data.series!.part)
 	.map((e) => ({
 		part: e.data.series!.part,
-		blurb: e.data.series!.blurb,
-		slug: e.slug,
+		blurb: e.data.series!.blurb as string | null,
+		slug: e.slug as string | null,
 		isCurrent: e.slug === currentSlug,
+		isGhost: false,
 	}));
 
 const seriesTitle = allWriting.find((e) => e.data.series?.id === seriesId)?.data.series?.title ?? seriesId;
@@ -32,6 +32,22 @@ for (const e of allWriting) {
 	list.push({ label: e.data.spinoffOf.label, slug: e.slug, isCurrent: e.slug === currentSlug });
 	spinoffsByPart.set(e.data.spinoffOf.part, list);
 }
+
+// A deep dive can reference a part that hasn't been written yet — render a
+// greyed-out, unlinked stub for it rather than letting the deep dive vanish
+// from the graph entirely. Resolves itself once the real part is published.
+const realPartNumbers = new Set(realParts.map((p) => p.part));
+const ghostParts = [...spinoffsByPart.keys()]
+	.filter((partNum) => !realPartNumbers.has(partNum))
+	.map((partNum) => ({
+		part: partNum,
+		blurb: null as string | null,
+		slug: null as string | null,
+		isCurrent: false,
+		isGhost: true,
+	}));
+
+const parts = [...realParts, ...ghostParts].sort((a, b) => a.part - b.part);
 ---
 
 <nav class="series-nav">
@@ -39,15 +55,18 @@ for (const e of allWriting) {
   <div class="series-track-scroll">
   <div class="series-track">
     {parts.map((p) => (
-      <div class:list={['series-node-col', { current: p.isCurrent }]}>
-        {p.isCurrent ? (
+      <div class:list={['series-node-col', { current: p.isCurrent, ghost: p.isGhost }]}>
+        {p.isGhost ? (
+          <span class="series-dot ghost">{p.part}</span>
+        ) : p.isCurrent ? (
           <span class="series-dot">{p.part}</span>
         ) : (
-          <a class="series-dot" href={`/writing/${p.slug}`} title={p.blurb}>{p.part}</a>
+          <a class="series-dot" href={`/writing/${p.slug}`} title={p.blurb ?? undefined}>{p.part}</a>
         )}
         <div class="series-part-info">
           <span class="series-label">Part {p.part}</span>
-          {!p.isCurrent && (
+          {p.isGhost && <span class="series-ghost-note">not written yet</span>}
+          {!p.isGhost && !p.isCurrent && (
             <a class="series-blurb" href={`/writing/${p.slug}`}>{p.blurb}</a>
           )}
         </div>
@@ -148,6 +167,18 @@ for (const e of allWriting) {
     background: var(--accent-color);
     color: #fff;
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  }
+  .series-dot.ghost {
+    border-style: dashed;
+    color: var(--text-color);
+    opacity: 0.4;
+    cursor: default;
+  }
+  .series-ghost-note {
+    font-size: 10px;
+    font-style: italic;
+    color: var(--text-color);
+    opacity: 0.4;
   }
   .series-part-info {
     display: flex;
