@@ -12,10 +12,6 @@ Reference implementation: [`strata-ts`](https://github.com/Otagera/strata-ts) �
 
 Teaching style: guided/Socratic.
 
-<div class="decision">
-The Rust code that previously reached WAL was on a wiped laptop and wasn't in the last backup — only this curriculum's checkbox state and a devlog note survived, and neither is code. There is nothing in `strata-rs/` right now. Treat Module 1 as starting over; "you've built this before" is a note about the shape of it, not a shortcut.
-</div>
-
 ## Module 1: Key-Value Engine (Strata KV)
 
 <details open>
@@ -49,7 +45,7 @@ Phases below match the actual build order from `strata_ts`'s git history, not a 
 - [ ] Automatic triggering / background compaction loop — `src/kv/engine.ts`
 
 ### 1.4 Durability
-- [ ] Write-Ahead Log (WAL) — `src/kv/wal.ts` (`WALManager`), perf-tested in `src/kv/wal_perf.test.ts` — previously reached this point (Feb 2026) before the code was lost
+- [ ] Write-Ahead Log (WAL) — `src/kv/wal.ts` (`WALManager`), perf-tested in `src/kv/wal_perf.test.ts`
 - [ ] Recovery from WAL on startup — `src/kv/wal.ts` + recovery call in `src/kv/engine.ts` constructor
 
 ### 1.5 Read Path
@@ -89,10 +85,10 @@ Everything below is new files under `src/doc/`, plus a shared query layer, not t
 
 </details>
 
-## Module 4: Distribution (tentative — the "forgotten extension")
+## Module 4: Distribution
 
 <details>
-<summary><span class="status status-tentative">tentative</span> flagged as possibly "distribution," not confirmed.</summary>
+<summary><span class="status status-tentative">tentative</span> replication, partitioning, and consensus — scope not finalized.</summary>
 
 No TS reference exists for any of this — none of it was built in the TS version. Don't commit to a specific design until this is verified.
 
@@ -110,7 +106,3 @@ Supporting ideas surfaced from the TS README's "Future" section — likely infra
 `nan.fyi/database` may not cover distributed systems in depth — may need a secondary source (e.g. *Designing Data-Intensive Applications*, the Raft paper) once this module starts in earnest.
 
 </details>
-
-## Status
-
-1.1 Foundations done: MemTable (tombstone-based deletes, incremental size tracking) plus naive on-disk persistence via a binary length-prefixed record format and a new `Engine` struct (wraps `MemTable` + a file handle, replays on startup, writes-before-memtable-update on insert/delete). 15 tests passing across `mem_table.rs`/`engine.rs`, `cargo clippy` clean on the meaningful warnings. Next: SSTables to start 1.2 (LSM-Tree Core).
