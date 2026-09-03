@@ -49,4 +49,24 @@ match value {
 1. Size - This is pretty straightforward, we just want a handy way to keep track of the size as we make changes to the data store and would be easy to get at any point.
 
 Naive on-disk persistence
-As stated earlier we persistent data to disk, in more sophisticated systems how that is store is more advanced and we will get to those very soon as much as we can but for a start we need a way
+As stated earlier we persistent data to disk, in more sophisticated systems how that is store is more advanced and we will get to those very soon as much as we can but for a start we just need a way to read and write to disk. So the engine simply consisted of our memtable and an open file handle for the reading and writing like:
+
+```rust
+pub struct Engine {
+    mem_table: MemTable,
+    file: File,
+}
+```
+
+When we were dealing with a plain file we just had to deal with trying to figure out end of line or end of file. In the sense that you have
+
+```text
+key:value\n
+key:$nullified\n
+>
+```
+
+But dealing with binaries it is just a stream of bytes so we need to figure out a standard way of representing information in this stream so when we are reading it back we can decode the information. For a single key-value pair of data we went with -
+`key_size -> key -> value_existence -> value_size -> value`
+
+1. key_size & value_size - this is enssen
