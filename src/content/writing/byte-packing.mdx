@@ -4,18 +4,19 @@ date: "2026-09-02"
 readTime: "9 min"
 summary: "Hand-rolling u32-to-bytes encoding and back with bit shifts, and why the byte order you pick (big-endian vs little-endian) actually matters."
 tags: ["rust", "bit-manipulation", "encoding", "systems-programming"]
-draft: true
 ---
+
+import ByteShiftWidget from "../../components/writing/ByteShiftWidget.astro";
 
 Byte packing takes a number, say a `u32`, and breaks it into its individual `u8` bytes, and back again. Here's the bit manipulation behind it, and why the order you pack those bytes in matters.
 
 A quick refresher on the integer types involved:
 
 | **Data Type** | **Bit Width** | **Total Values (Base 10)** | **Minimum Value** | **Maximum Value** |
-| ------------- | ------------- | --------------------------- | ------------------ | ------------------ |
-| **`u8`**      | 8 bits        | **256** (2⁸)                | 0                   | **255**             |
-| **`u16`**     | 16 bits       | **65,536** (2¹⁶)             | 0                   | **65,535**           |
-| **`u32`**     | 32 bits       | **4,294,967,296** (2³²)      | 0                   | **4,294,967,295**    |
+| ------------- | ------------- | -------------------------- | ----------------- | ----------------- |
+| **`u8`**      | 8 bits        | **256** (2⁸)               | 0                 | **255**           |
+| **`u16`**     | 16 bits       | **65,536** (2¹⁶)           | 0                 | **65,535**        |
+| **`u32`**     | 32 bits       | **4,294,967,296** (2³²)    | 0                 | **4,294,967,295** |
 
 We'll focus on `u32`. Laid out as four bytes, it looks like this (all zero for now):
 
@@ -52,10 +53,10 @@ Take 8, represented in bits as `00001000`. Since it only occupies **byte 0**, he
 
 | bit 7 | bit 6 | bit 5 | bit 4 | bit 3 | bit 2 | bit 1 | bit 0 | Base 2 map | In Base 10 |
 | :---- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | :--------: | ---------: |
-| `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   | `0`   |   $$2^3$$  |        `8` |
-| `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   |   $$2^2$$  |        `4` |
-| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   |   $$2^1$$  |        `2` |
-| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   |   $$2^0$$  |        `1` |
+| `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   | `0`   |  $$2^3$$   |        `8` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   |  $$2^2$$   |        `4` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   |  $$2^1$$   |        `2` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   |  $$2^0$$   |        `1` |
 | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   |  $$None$$  |        `0` |
 
 Right-shifting by 1 is the same as floor-dividing by 2:
@@ -69,7 +70,7 @@ Right-shifting by 1 is the same as floor-dividing by 2:
 
 Take another example, 150, represented as `10010110`:
 
-| bit 7 | bit 6 | bit 5 | bit 4 | bit 3 | bit 2 | bit 1 | bit 0 |         Base 2 map        | In Base 10 |
+| bit 7 | bit 6 | bit 5 | bit 4 | bit 3 | bit 2 | bit 1 | bit 0 |        Base 2 map         | In Base 10 |
 | :---- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | :-----------------------: | ---------: |
 | `1`   | `0`   | `0`   | `1`   | `0`   | `1`   | `1`   | `0`   | $$2^7 + 2^4 + 2^2 + 2^1$$ |      `150` |
 | `0`   | `1`   | `0`   | `0`   | `1`   | `0`   | `1`   | `1`   | $$2^6 + 2^3 + 2^1 + 2^0$$ |       `75` |
@@ -79,7 +80,7 @@ Take another example, 150, represented as `10010110`:
 | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   | `0`   |          $$2^2$$          |        `4` |
 | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   | `0`   |          $$2^1$$          |        `2` |
 | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `1`   |          $$2^0$$          |        `1` |
-| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   |          $$None$$         |        `0` |
+| `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   | `0`   |         $$None$$          |        `0` |
 
 ```
 150 / 2 = 75
@@ -106,11 +107,11 @@ Say we want to convert 300 into a 4-byte array, `bytes = [0u8; 4]`:
 
 300 in binary is `1 0010 1100`, which spills one bit into a second byte. Written out fully:
 
-|                             | Byte 3      | Byte 2      | Byte 1      | Byte 0              |
-| --------------------------- | ----------- | ----------- | ----------- | -------------------- |
-| Bytes in 8-bit groups        | `0000 0000` | `0000 0000` | `0000 0001` | `0010 1100`          |
-| Base 2 map                   | $$None$$    | $$None$$    | $$2^0$$     | $$2^5 + 2^3 + 2^2$$  |
-| Decimal                       | 0           | 0           | 1           | 44                    |
+|                       | Byte 3      | Byte 2      | Byte 1      | Byte 0              |
+| --------------------- | ----------- | ----------- | ----------- | ------------------- |
+| Bytes in 8-bit groups | `0000 0000` | `0000 0000` | `0000 0001` | `0010 1100`         |
+| Base 2 map            | $$None$$    | $$None$$    | $$2^0$$     | $$2^5 + 2^3 + 2^2$$ |
+| Decimal               | 0           | 0           | 1           | 44                  |
 
 So `[0, 0, 1, 44]` is the byte representation of 300.
 
@@ -164,8 +165,14 @@ pub(crate) fn decode_packed_byte(bytes: [u8; 4]) -> u32 {
 
 The cast to `u32` before shifting matters because a `u8` only has 8 bit-positions to begin with so shifting it left just pushes bits off the top and they're lost. Casting up to `u32` first gives the bits 32 positions to land in, so nothing gets discarded when a byte moves up to position 24.
 
+## Try It Yourself
+
+The widget below runs both functions above on the same three examples used throughout this post. The highlighted window is the `u8` boundary: for `byte_packing` it's where the low byte gets read off after each right shift, for `decode_packed_byte` it's where each byte starts before it slides left into place. Step through manually, or press play.
+
+<ByteShiftWidget />
+
 ## References
 
 1. [Right Shift Explained - Bit Manipulation Tutorial](https://youtu.be/rRYwmEG3wJI?si=zv53DwRUNdkpZUhZ) (YouTube)
 
-*Written with Claude Code as a pair-programming/tutoring partner throughout the implementation.*
+_This is part of a series from my DB learning with Claude Code as a pair-programming/tutoring partner. You cna find the Curricullunm [here]()._

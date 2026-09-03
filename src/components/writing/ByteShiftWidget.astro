@@ -1,0 +1,452 @@
+<div class="writing-widget">
+  <div class="panel">
+    <div class="prompt-row">
+      <span class="sigil">$</span>
+      <span class="cmd" id="bsv-promptCmd">./byte_pack --encode 300</span>
+      <span class="cursor"></span>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">mode</span>
+        <div class="segmented" role="group" aria-label="Mode">
+          <button type="button" id="bsv-modeEncode" aria-pressed="true">encode</button>
+          <button type="button" id="bsv-modeDecode" aria-pressed="false">decode</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <span class="control-label">value</span>
+        <div class="chip-row" id="bsv-valueChips">
+          <button type="button" class="chip" data-value="8" aria-pressed="false">8</button>
+          <button type="button" class="chip" data-value="150" aria-pressed="false">150</button>
+          <button type="button" class="chip" data-value="300" aria-pressed="true">300</button>
+        </div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="op-readout" id="bsv-opReadout"><span class="idle">register at rest &mdash; press Next to shift</span></div>
+      <div class="zone-labels">
+        <span>Byte 3</span><span>Byte 2</span><span>Byte 1</span><span>Byte 0</span>
+      </div>
+      <div class="viewport-scroll">
+        <div class="viewport">
+          <div class="track" id="bsv-track"></div>
+          <div class="capture-window" id="bsv-captureWindow"></div>
+        </div>
+      </div>
+      <div class="window-caption" id="bsv-windowCaption">↳ the u8 boundary: value's low 8 bits after each shift</div>
+    </div>
+    <div class="summary">
+      <span class="label" id="bsv-summaryLabel">bytes[] =</span>
+      <span class="value" id="bsv-summaryValue">[ , , , ]</span>
+    </div>
+    <div class="log" id="bsv-log"></div>
+    <div class="playback">
+      <div class="transport">
+        <button type="button" class="tbtn" id="bsv-btnReset" title="Reset">⟲</button>
+        <button type="button" class="tbtn" id="bsv-btnPrev" title="Previous step">⏮</button>
+        <button type="button" class="tbtn primary" id="bsv-btnPlay" title="Play">▶</button>
+        <button type="button" class="tbtn" id="bsv-btnNext" title="Next step">⏭</button>
+      </div>
+      <span class="step-readout" id="bsv-stepReadout">step 0 / 4</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Scoped to this component automatically by Astro — no manual
+     ancestor-prefixing needed. Tokens (--accent, --bg-well, etc.) still
+     come from the .writing-widget rule in the shared stylesheet, since
+     scoping only affects selectors declared here, not class names. */
+  .op-readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    min-height: 30px;
+    font-variant-numeric: tabular-nums;
+  }
+  .op-readout .op {
+    color: var(--accent);
+  }
+  .op-readout .arrow {
+    font-size: 16px;
+    color: var(--accent);
+    display: inline-block;
+  }
+  .op-readout .idle {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  @keyframes nudgeRight {
+    0%, 100% { transform: translateX(0); opacity: 0.55; }
+    50% { transform: translateX(5px); opacity: 1; }
+  }
+  @keyframes nudgeLeft {
+    0%, 100% { transform: translateX(0); opacity: 0.55; }
+    50% { transform: translateX(-5px); opacity: 1; }
+  }
+  .arrow.right {
+    animation: nudgeRight 0.9s ease-in-out infinite;
+  }
+  .arrow.left {
+    animation: nudgeLeft 0.9s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .arrow.right, .arrow.left { animation: none; }
+  }
+  .zone-labels {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 672px;
+    max-width: 100%;
+    margin: 0 auto 6px;
+    text-align: center;
+  }
+  .zone-labels span {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .viewport-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .viewport {
+    position: relative;
+    width: 672px;
+    max-width: none;
+    margin: 0 auto;
+    height: 40px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-well);
+  }
+  .track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 1344px;
+    display: flex;
+    will-change: transform;
+  }
+  /* .cell elements are created client-side via document.createElement, so
+     they never receive Astro's scoping attribute — :global() is required
+     here or these rules silently never match. */
+  :global(.cell) {
+    width: 21px;
+    height: 100%;
+    flex: 0 0 21px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    border-right: 1px solid var(--border-faint);
+  }
+  :global(.cell.grp-b) {
+    background: var(--bg-grp);
+  }
+  :global(.cell.on) {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .track.sliding {
+    transition: transform 1500ms cubic-bezier(0.6, 0, 0.4, 1);
+  }
+  .capture-window {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    bottom: -1px;
+    width: 168px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    box-shadow: none;
+    pointer-events: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  .capture-window.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .capture-window.pulse {
+    animation: capPulse 480ms ease-out;
+  }
+  @keyframes capPulse {
+    0% { box-shadow: 0 0 0 3px var(--accent-soft); }
+    40% { box-shadow: 0 0 0 9px var(--accent-soft); }
+    100% { box-shadow: 0 0 0 3px var(--accent-soft); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .capture-window.pulse { animation: none; }
+  }
+  .window-caption {
+    text-align: right;
+    width: 672px;
+    max-width: 100%;
+    margin: 6px auto 0;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+</style>
+
+<script>
+  // Single-instance assumption: ids are fixed, so only one
+  // ByteShiftWidget can exist per page.
+  (function () {
+    var CELL = 21;
+    var state = { mode: 'encode', value: 300, step: 0, playing: false, animating: false, aborted: false };
+    var els = {
+      promptCmd: document.getElementById('bsv-promptCmd'),
+      modeEncode: document.getElementById('bsv-modeEncode'),
+      modeDecode: document.getElementById('bsv-modeDecode'),
+      valueChips: document.getElementById('bsv-valueChips'),
+      opReadout: document.getElementById('bsv-opReadout'),
+      track: document.getElementById('bsv-track'),
+      captureWindow: document.getElementById('bsv-captureWindow'),
+      windowCaption: document.getElementById('bsv-windowCaption'),
+      summaryLabel: document.getElementById('bsv-summaryLabel'),
+      summaryValue: document.getElementById('bsv-summaryValue'),
+      log: document.getElementById('bsv-log'),
+      btnReset: document.getElementById('bsv-btnReset'),
+      btnPrev: document.getElementById('bsv-btnPrev'),
+      btnNext: document.getElementById('bsv-btnNext'),
+      btnPlay: document.getElementById('bsv-btnPlay'),
+      stepReadout: document.getElementById('bsv-stepReadout'),
+    };
+    function bytesMSBFirst(v) { return [ (v >>> 24) & 0xFF, (v >>> 16) & 0xFF, (v >>> 8) & 0xFF, v & 0xFF ]; }
+    function bin8(n) { return n.toString(2).padStart(8, '0').split(''); }
+    function byteLabel(k) { return 'Byte ' + (3 - k); }
+    function shiftFor(k) { return 8 * (3 - k); }
+    function buildCells(bitsArr64) {
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < 64; i++) {
+        var b = bitsArr64[i];
+        var cell = document.createElement('div');
+        cell.className = 'cell' + (b === '1' ? ' on' : '') + (Math.floor(i / 8) % 2 === 1 ? ' grp-b' : '');
+        cell.textContent = b;
+        frag.appendChild(cell);
+      }
+      return frag;
+    }
+    // ENCODE: track = 32 zero-padding cells + 32 bits of value (MSB..LSB). Offset only changes.
+    function encodeTrackBits(value) {
+      var bits = value.toString(2).padStart(32, '0').split('');
+      return new Array(32).fill('0').concat(bits);
+    }
+    // DECODE: track = byte bits at [24..31], zeros elsewhere (64 total).
+    function decodeTrackBits(byteVal) {
+      var arr = new Array(64).fill('0');
+      var bits = bin8(byteVal);
+      for (var i = 0; i < 8; i++) arr[24 + i] = bits[i];
+      return arr;
+    }
+    function setTrackContent(bitsArr64) {
+      els.track.innerHTML = '';
+      els.track.appendChild(buildCells(bitsArr64));
+    }
+    function setTransform(px, animate) {
+      if (!animate) els.track.classList.remove('sliding');
+      else els.track.classList.add('sliding');
+      els.track.style.transform = 'translateX(' + (-px) + 'px)';
+    }
+    function pulseWindow() {
+      els.captureWindow.classList.remove('pulse');
+      void els.captureWindow.offsetWidth;
+      els.captureWindow.classList.add('pulse');
+    }
+    // Chrome that doesn't participate in the shift animation: prompt line, mode/value
+    // controls, the settled summary, the step log, and button enabled-state.
+    function updateChrome() {
+      var bytes = bytesMSBFirst(state.value);
+      els.promptCmd.textContent = state.mode === 'encode'
+        ? './byte_pack --encode ' + state.value
+        : './byte_pack --decode [' + bytes.join(', ') + ']';
+      els.modeEncode.setAttribute('aria-pressed', state.mode === 'encode');
+      els.modeDecode.setAttribute('aria-pressed', state.mode === 'decode');
+      Array.prototype.forEach.call(els.valueChips.children, function (chip) {
+        chip.setAttribute('aria-pressed', Number(chip.dataset.value) === state.value);
+      });
+      els.windowCaption.textContent = state.mode === 'encode'
+        ? '↳ u8 window: reads the low 8 bits after each shift'
+        : '↳ u8 window: where each byte enters before it slides into place';
+      if (state.mode === 'encode') {
+        els.summaryLabel.textContent = 'bytes[] =';
+        var parts = bytes.map(function (b, i) { return i < state.step ? '<span class="filled">' + b + '</span>' : '&middot;'; });
+        els.summaryValue.innerHTML = '[ ' + parts.join(', ') + ' ]';
+      } else {
+        els.summaryLabel.textContent = 'value =';
+        var total = 0;
+        for (var i = 0; i < state.step; i++) total |= bytes[i] << shiftFor(i);
+        els.summaryValue.innerHTML = '<span class="filled">' + total + '</span>';
+      }
+      if (state.step === 0) {
+        els.log.innerHTML = '<div class="empty">// waiting for first step&hellip;</div>';
+      } else {
+        var lines = [];
+        var running = 0;
+        for (var j = 0; j < state.step; j++) {
+          var sj = shiftFor(j);
+          var xref = '<span class="xref">= ' + byteLabel(j) + '</span>';
+          if (state.mode === 'encode') {
+            lines.push('<div class="line"><span class="m">&raquo;</span>bytes[' + j + '] = (value >> ' + sj + ') as u8 = ' + bytes[j] + xref + '</div>');
+          } else {
+            var contrib = bytes[j] << sj;
+            running |= contrib;
+            lines.push('<div class="line"><span class="m">&raquo;</span>value |= (bytes[' + j + '] as u32) << ' + sj + ' = ' + contrib + '  &nbsp;(value = ' + running + ')' + xref + '</div>');
+          }
+        }
+        if (state.step === 4) {
+          lines.push(state.mode === 'encode'
+            ? '<div class="line"><span class="m">&raquo;</span>bytes = [' + bytes.join(', ') + ']</div>'
+            : '<div class="line"><span class="m">&raquo;</span>value = ' + state.value + '</div>');
+        }
+        els.log.innerHTML = lines.join('');
+      }
+      els.stepReadout.textContent = 'step ' + state.step + ' / 4';
+      els.btnPrev.disabled = state.animating || state.step === 0;
+      els.btnNext.disabled = state.animating || state.step === 4;
+      els.modeEncode.disabled = state.animating;
+      els.modeDecode.disabled = state.animating;
+      Array.prototype.forEach.call(els.valueChips.children, function (chip) { chip.disabled = state.animating; });
+      els.btnPlay.textContent = state.playing ? '⏸' : '▶';
+    }
+    // Puts the strip in its neutral resting pose (unshifted / empty) and shows a
+    // preview of the operation about to run, without performing it yet.
+    function showRest(upcomingK) {
+      els.captureWindow.classList.remove('active', 'pulse');
+      if (state.mode === 'encode') {
+        setTrackContent(encodeTrackBits(state.value));
+        setTransform(32 * CELL, false);
+      } else {
+        setTrackContent(new Array(64).fill('0'));
+        setTransform(0, false);
+      }
+      if (upcomingK === null) {
+        els.opReadout.innerHTML = state.step >= 4
+          ? '<span class="idle">done &mdash; press Reset to run it again</span>'
+          : '<span class="idle">register at rest &mdash; press Next to shift</span>';
+      } else {
+        var s = shiftFor(upcomingK);
+        els.opReadout.innerHTML = state.mode === 'encode'
+          ? '<span class="idle">next: value >> ' + s + '</span>'
+          : '<span class="idle">next: bytes[' + upcomingK + '] << ' + s + '</span>';
+      }
+    }
+    // Runs one full step as a readable sequence: announce -> slide -> land -> hold.
+    function runStep(k, onDone) {
+      state.animating = true;
+      updateChrome();
+      var bytes = bytesMSBFirst(state.value);
+      var s = shiftFor(k);
+      els.opReadout.innerHTML = (state.mode === 'encode'
+        ? 'value <span class="op">>></span> ' + s
+        : 'bytes[' + k + '] <span class="op"><<</span> ' + s)
+        + ' <span class="arrow ' + (state.mode === 'encode' ? 'right' : 'left') + '">'
+        + (state.mode === 'encode' ? '&#8594;' : '&#8592;') + '</span>';
+      setTimeout(function () {
+        if (state.aborted) return;
+        if (state.mode === 'encode') {
+          setTransform((32 - s) * CELL, true);
+        } else {
+          setTrackContent(decodeTrackBits(bytes[k]));
+          setTransform(0, false);
+          void els.track.offsetWidth;
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              if (!state.aborted) setTransform(s * CELL, true);
+            });
+          });
+        }
+        setTimeout(function () {
+          if (state.aborted) return;
+          els.captureWindow.classList.add('active');
+          pulseWindow();
+          var result = state.mode === 'encode' ? bytes[k] : (bytes[k] << s);
+          els.opReadout.innerHTML = (state.mode === 'encode'
+            ? 'value <span class="op">>></span> ' + s
+            : 'bytes[' + k + '] <span class="op"><<</span> ' + s)
+            + ' <span class="op">=</span> ' + result;
+          state.step = k + 1;
+          updateChrome();
+          setTimeout(function () {
+            if (state.aborted) return;
+            state.animating = false;
+            updateChrome();
+            onDone();
+          }, 1400);
+        }, 1650);
+      }, 900);
+    }
+    function advance() {
+      if (state.animating || state.step >= 4) return;
+      var k = state.step;
+      runStep(k, function () {
+        if (state.playing && state.step < 4) {
+          showRest(state.step);
+          setTimeout(function () { if (!state.aborted && state.playing) advance(); }, 900);
+        } else {
+          if (state.step >= 4) state.playing = false;
+          updateChrome();
+          showRest(state.step < 4 ? state.step : null);
+        }
+      });
+    }
+    function haltAnimation() { state.aborted = true; state.animating = false; state.playing = false; }
+    function setMode(m) {
+      if (state.animating || state.mode === m) return;
+      state.mode = m; state.step = 0; haltAnimation(); state.aborted = false;
+      updateChrome(); showRest(0);
+    }
+    function setValue(v) {
+      if (state.animating || state.value === v) return;
+      state.value = v; state.step = 0; haltAnimation(); state.aborted = false;
+      updateChrome(); showRest(0);
+    }
+    function next() {
+      if (state.animating) return;
+      state.aborted = false;
+      advance();
+    }
+    function prev() {
+      haltAnimation(); state.aborted = false;
+      if (state.step > 0) state.step -= 1;
+      updateChrome(); showRest(state.step < 4 ? state.step : null);
+    }
+    function reset() {
+      haltAnimation(); state.aborted = false; state.step = 0;
+      updateChrome(); showRest(0);
+    }
+    function togglePlay() {
+      if (state.playing) { state.playing = false; updateChrome(); return; }
+      state.aborted = false;
+      if (!state.animating) {
+        if (state.step >= 4) { state.step = 0; updateChrome(); showRest(0); }
+        state.playing = true; updateChrome(); advance();
+      } else {
+        state.playing = true; updateChrome();
+      }
+    }
+    els.modeEncode.addEventListener('click', function () { setMode('encode'); });
+    els.modeDecode.addEventListener('click', function () { setMode('decode'); });
+    els.valueChips.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (chip && !chip.disabled) setValue(Number(chip.dataset.value));
+    });
+    els.btnNext.addEventListener('click', next);
+    els.btnPrev.addEventListener('click', prev);
+    els.btnReset.addEventListener('click', reset);
+    els.btnPlay.addEventListener('click', togglePlay);
+    updateChrome();
+    showRest(0);
+  })();
+</script>
