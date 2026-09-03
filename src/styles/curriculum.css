@@ -1,0 +1,123 @@
+/* Curriculum pages: collapsible modules + design-decision callouts.
+   Reuses the site's real --accent-color/--grid-color tokens directly
+   (this lives inside the same .prose article as posts/projects, no
+   separate widget token bridge needed). */
+
+.curriculum-article details {
+	border-left: 2px solid var(--grid-color);
+	padding-left: 1.25rem;
+	margin: 2rem 0;
+	transition: border-color 0.2s;
+}
+
+.curriculum-article details[open] {
+	border-left-color: var(--accent-color);
+}
+
+.curriculum-article summary {
+	cursor: pointer;
+	list-style: none;
+	font-weight: 600;
+	padding: 0.35rem 0;
+	line-height: 1.6;
+}
+
+.curriculum-article summary::-webkit-details-marker {
+	display: none;
+}
+
+.curriculum-article summary::before {
+	content: '▸';
+	color: var(--accent-color);
+	transition: transform 0.15s ease;
+	display: inline-block;
+	margin-right: 0.6rem;
+}
+
+.curriculum-article details[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.curriculum-article summary .status {
+	display: inline-block;
+	font-size: 0.7em;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	padding: 0.15em 0.5em;
+	border-radius: 4px;
+	margin-right: 0.5rem;
+	vertical-align: 1px;
+}
+
+.curriculum-article summary .status-active {
+	color: var(--accent-color);
+	background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+	border: 1px solid color-mix(in srgb, var(--accent-color) 40%, transparent);
+}
+
+.curriculum-article summary .status-todo,
+.curriculum-article summary .status-tentative {
+	color: var(--text-color);
+	opacity: 0.55;
+	background: transparent;
+	border: 1px solid var(--grid-color);
+}
+
+.curriculum-article .decision {
+	border-left: 2px solid color-mix(in srgb, var(--accent-color) 55%, transparent);
+	background: color-mix(in srgb, var(--accent-color) 6%, transparent);
+	padding: 0.85rem 1.1rem;
+	margin: 1.25rem 0;
+	border-radius: 0 6px 6px 0;
+	font-size: 0.92em;
+}
+
+.curriculum-article .decision strong:first-child {
+	color: var(--accent-color);
+}
+
+/* GFM task lists (- [x] / - [ ]) */
+.curriculum-article ul.contains-task-list {
+	list-style: none;
+	padding-left: 0;
+}
+
+.curriculum-article .task-list-item {
+	margin: 0.5rem 0;
+	line-height: 1.6;
+}
+
+.curriculum-article .task-list-item input[type='checkbox'] {
+	appearance: none;
+	-webkit-appearance: none;
+	width: 14px;
+	height: 14px;
+	border: 1px solid var(--grid-color);
+	border-radius: 3px;
+	position: relative;
+	top: 1px;
+	margin-right: 0.6rem;
+	cursor: default;
+}
+
+.curriculum-article .task-list-item input[type='checkbox']:checked {
+	background: var(--accent-color);
+	border-color: var(--accent-color);
+}
+
+.curriculum-article .task-list-item input[type='checkbox']:checked::after {
+	content: '✓';
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	color: #fff;
+	line-height: 1;
+}
+
+.curriculum-article .task-list-item:has(input:checked) {
+	opacity: 0.6;
+}

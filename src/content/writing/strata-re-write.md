@@ -1,3 +1,17 @@
+---
+title: "Rewriting StrataDB in Rust, Part 1: MemTable and Naive Persistence"
+date: "2026-09-01"
+readTime: "4 min"
+summary: "Starting the StrataDB rewrite in Rust, from a curriculum built off the TypeScript version's own git history. First up: the MemTable, why BTreeMap, and modeling tombstones with Option<T>."
+tags: ["rust", "database", "systems", "strata-db"]
+draft: true
+series:
+  id: "strata-rs-rewrite"
+  title: "Strata DB — Rust Rewrite"
+  part: 1
+  blurb: "MemTable and naive on-disk persistence"
+---
+
 So previously I took inspiration of [this]() and with AI (Gemini mostly) was able to come up with some working KV DB then Document style then eventually a passable SQL db all built on top of each other. On some level it the most impressive this I have done (with the caveat that AI was involved, feel how you feel about it cause I sure have not too good feelings about it) so after going around thinking of what to work on next after working on a couple of "games", I knew that DBs were way more than what I had done, for one I was not able to use it in even a dummy application. So I went back to claude and asked it to suggest some new directions to go with it and it suggested distribution (which would involve replication, partitioning, sharding, etc.) good stuff, but then i thought why not do this whole thing in Rust, (I am not a masochist but yeah this was a weird decision when my understanding of rust was/is still sparse). So rust it was, start the whole thing from the beginning and do what we did before.
 
 So this blog is about that re-write mostly. Before work began I asked Claude to review the Typescript code and draft a curricullm factoring the way the TS version was built up from using a simple file to store the KVs (the git history was helpful here) and we did, the past couple of weeks has been about that start.

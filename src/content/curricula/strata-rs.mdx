@@ -1,0 +1,116 @@
+---
+title: "Strata DB — Rust Rewrite Curriculum"
+summary: "The build plan for the Rust rewrite of StrataDB, updated in place as each module lands. Followed from the KV engine up through distribution."
+updatedDate: "2026-09-01"
+project: "strata-db"
+seriesId: "strata-rs-rewrite"
+---
+
+Primary source: [nan.fyi/database](https://www.nan.fyi/database) — the same curriculum the TypeScript version followed.
+
+Reference implementation: [`strata-ts`](https://github.com/Otagera/strata-ts) — structural reference only, not a straight port. File references below point into `strata_ts/src/` and are for "what did this look like last time," not something to transliterate.
+
+Teaching style: guided/Socratic.
+
+<div class="decision">
+The Rust code that previously reached WAL was on a wiped laptop and wasn't in the last backup — only this curriculum's checkbox state and a devlog note survived, and neither is code. There is nothing in `strata-rs/` right now. Treat Module 1 as starting over; "you've built this before" is a note about the shape of it, not a shortcut.
+</div>
+
+## Module 1: Key-Value Engine (Strata KV)
+
+<details open>
+<summary><span class="status status-active">in progress</span> 1.1 Foundations done: MemTable + naive on-disk persistence, 15 tests passing. Next: SSTables (1.2).</summary>
+
+Phases below match the actual build order from `strata_ts`'s git history, not a topic list — each phase is a real commit boundary, small enough to finish and devlog in one sitting. In the TS version, MemTable, SSTables, and compaction aren't split into separate files — they're all methods on one `StrataKV` class in `kv/engine.ts`.
+
+<div class="decision">
+<strong>Design decision (carried over from the pre-wipe Rust attempt, confirmed 2026-08-15):</strong> storage uses raw binary encoding (`Vec&lt;u8&gt;` keys/values throughout), <em>not</em> JSON like the TS WAL (`WALManager` is JSON Lines, one object per line). Deliberate divergence from the TS reference — keep it in mind for WAL and SSTable serialization too, not just the MemTable.
+</div>
+
+<div class="decision">
+<strong>Design decision (2026-08-19):</strong> deletes are tombstones modeled as `Option&lt;Vec&lt;u8&gt;&gt;` values in the map (`BTreeMap&lt;Vec&lt;u8&gt;, Option&lt;Vec&lt;u8&gt;&gt;&gt;`), not a sentinel string like TS's `$nullified`. `get` returns `Option&lt;Option&lt;Vec&lt;u8&gt;&gt;&gt;` — outer `None` means "key not in this layer, keep searching," `Some(None)` means "tombstoned, stop here," `Some(Some(v))` means "live value." This three-state shape is what lets a future multi-layer read (MemTable → older memtables → SSTables) stop at a tombstone instead of falling through to a stale value in an older layer. `insert` mirrors the same shape in its return value (the previous entry, if any), and tracks `size` incrementally rather than the TS reference's entry-count threshold.
+</div>
+
+<div class="decision">
+<strong>Design decision (2026-09-01):</strong> naive on-disk persistence uses a length-prefixed binary record format instead of TS's delimited text format (`the_humble_file.txt`, sentinel-string tombstones): `key_len:u32 | key | tag:u8 (0=tombstone, 1=value present) | value_len:u32 (if tag==1) | value (if tag==1)`. Persistence lives in a new `Engine` struct that wraps `MemTable` (kept as a pure in-memory type with no knowledge of files) alongside an open file handle — `Engine::open` reads the file and replays it into a fresh `MemTable`, and `insert`/`delete` write the encoded record to disk <em>before</em> updating the in-memory copy, so a failed write never leaves memory and disk out of sync. Code is split across `strata-rs/src/mem_table.rs` and `strata-rs/src/engine.rs` (`main.rs` is now just the crate entry point).
+</div>
+
+### 1.1 Foundations
+- [x] MemTable (in-memory sorted map) — `BTreeMap<Vec<u8>, Option<Vec<u8>>>` (see tombstone design decision above); TS reference: `src/kv/engine.ts` (`StrataKV`, in-memory map + get/set, though TS uses string keys/values and a sentinel-string tombstone instead of `Option`) — `insert`, `get`, `delete`, `size`, `clear` implemented and tested (`strata-rs/src/mem_table.rs`)
+- [x] Naive on-disk persistence + first tests — `Engine` struct wrapping `MemTable` + an open file handle; binary length-prefixed record format, replay-from-file on startup (see design decision above); TS reference: `index.ts`'s original `database_init`/`database_set`/`database_get`/`database_delete` prototype (single append-only text file + in-memory offset map) — `open`, `insert`, `get`, `delete`, `size`, `clear` implemented and tested (`strata-rs/src/engine.rs`)
+
+### 1.2 LSM-Tree Core
+- [ ] SSTables (immutable on-disk files) — write side in `src/kv/engine.ts` (flush logic), read side in `src/kv/sst_iterator.ts` (`SSTIterator`)
+- [ ] Bloom filters — `src/shared/bloom_filter.ts` (`BloomFilter`)
+- [ ] Sparse indexing — first pass (block offsets, min/max key ranges) — `src/kv/engine.ts` (block index build), type in `src/shared/interfaces.ts` (`BlockIndex`)
+
+### 1.3 Compaction
+- [ ] K-way merge compaction — `src/kv/merge_iterator.ts` (`KWayMergeIterator`), triggered from `src/kv/engine.ts`
+- [ ] Automatic triggering / background compaction loop — `src/kv/engine.ts`
+
+### 1.4 Durability
+- [ ] Write-Ahead Log (WAL) — `src/kv/wal.ts` (`WALManager`), perf-tested in `src/kv/wal_perf.test.ts` — previously reached this point (Feb 2026) before the code was lost
+- [ ] Recovery from WAL on startup — `src/kv/wal.ts` + recovery call in `src/kv/engine.ts` constructor
+
+### 1.5 Read Path
+- [ ] K-way merge iterator (range scans) — `src/kv/merge_iterator.ts`
+- [ ] Scan support — `src/kv/engine.ts` (`scan()`), `src/kv/scan.test.ts`
+- [ ] Sparse indexing, refined (block-level, revisited after WAL in the TS build) — `src/kv/sst_iterator.ts`, `src/kv/mem_table_iterator.ts` (`MemTableIterator`)
+
+</details>
+
+## Module 2: Document Engine (Strata Doc)
+
+<details>
+<summary><span class="status status-todo">not started</span> built as a layer on top of Strata KV.</summary>
+
+Everything below is new files under `src/doc/`, plus a shared query layer, not touching the KV engine's internals.
+
+- [ ] Key protocol: `collection` + `id` → KV key encoding — `src/doc/engine.ts` (`_makeKey`: `` `${collection}::${id}` ``, URL-encoded; `IDX::` key format for indexes lives here too)
+- [ ] ObjectId generation — `src/doc/id.ts` (`StrataId.generate()` — timestamp + random + counter, Mongo-ObjectId-style), tested in `src/doc/id.test.ts`
+- [ ] `insert` / `findById` — `src/doc/engine.ts` (`StrataDoc`)
+- [ ] `find()` via `scan()`, equality queries — `src/doc/engine.ts`, `src/shared/query_cursor.ts` (`QueryCursor`)
+- [ ] Secondary indexing (`IDX::` keys) — `src/doc/engine.ts` (index creation + lookup)
+- [ ] Advanced query executor (`$gt`, `$lt`, `$gte`, `$lte`, `$ne`, `$in`, `$nin`) + basic optimizer — `src/shared/query_cursor.ts` (`IndexQueryCursor extends QueryCursor`)
+
+</details>
+
+## Module 3: Relational Engine (Strata SQL)
+
+<details>
+<summary><span class="status status-todo">not started</span> lexer, parser, and a SQL layer over Strata Doc.</summary>
+
+- [ ] Lexer & Parser → AST — `src/sql/lexer.ts` (+ `lexer.test.ts`), `src/sql/parser.ts` (+ `parser.test.ts`)
+- [ ] System catalog (`CREATE TABLE`, schema/type enforcement) — `src/sql/catalog.ts` (`SystemCatalog`)
+- [ ] Execution engine: `INSERT`, `SELECT` (Project, Filter, Scan) — `src/sql/engine.ts` (`StrataSQL`), tested in `src/sql/engine.test.ts`
+- [ ] Query planner (basic optimization) — no separate file in TS; folded into `StrataSQL` in `src/sql/engine.ts`
+- [ ] WAL-based transaction buffering — `src/kv/transaction.ts` (`Transaction`), wired through `StrataKV.beginTransaction()` in `src/kv/engine.ts` — in the TS build this landed alongside the SQL work (Feb), not right after Module 1's WAL — do it here, not in Module 1
+- [ ] Transaction manager: ACID via WAL markers + MVCC (snapshot isolation, transaction IDs) — **no TS reference exists for this.** `transaction.ts` only does buffering; grepping the TS codebase turns up no MVCC/snapshot-isolation implementation at all. This is genuinely new ground, not a port — the TS version's own "Strata SQL: Transaction Manager" issue (`u5y`) is still open too.
+
+</details>
+
+## Module 4: Distribution (tentative — the "forgotten extension")
+
+<details>
+<summary><span class="status status-tentative">tentative</span> flagged as possibly "distribution," not confirmed.</summary>
+
+No TS reference exists for any of this — none of it was built in the TS version. Don't commit to a specific design until this is verified.
+
+- [ ] Replication (leader/follower log shipping over the WAL)
+- [ ] Partitioning / sharding
+- [ ] Consensus (Raft or similar) for leader election / log agreement
+- [ ] Consistency model decisions
+
+Supporting ideas surfaced from the TS README's "Future" section — likely infrastructure *around* this module rather than the extension itself, and also unbuilt (design notes only, in `strata_ts/README.md`):
+
+- Multi-tenancy / `SpaceManager` (partitioned "rooms," isolating data per user/project) — `src/server/manager.ts` has a starting point (`SpaceManager` stub, currently points at the root `data/` dir)
+- Dashboard / observability UI (visualize SSTables, compaction, query performance) — UI shell exists at `src/ui/` (`app.tsx`, `components/Monitoring.tsx`) but the deep-engine metrics described in the README aren't wired up
+- WebSocket telemetry (broadcast engine internals — Bloom filter stats, compaction progress) — `/ws` endpoint scaffolded in `src/server.ts`, but only basic events broadcast today
+
+`nan.fyi/database` may not cover distributed systems in depth — may need a secondary source (e.g. *Designing Data-Intensive Applications*, the Raft paper) once this module starts in earnest.
+
+</details>
+
+## Status
+
+1.1 Foundations done: MemTable (tombstone-based deletes, incremental size tracking) plus naive on-disk persistence via a binary length-prefixed record format and a new `Engine` struct (wraps `MemTable` + a file handle, replays on startup, writes-before-memtable-update on insert/delete). 15 tests passing across `mem_table.rs`/`engine.rs`, `cargo clippy` clean on the meaningful warnings. Next: SSTables to start 1.2 (LSM-Tree Core).

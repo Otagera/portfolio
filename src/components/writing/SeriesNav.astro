@@ -1,0 +1,227 @@
+---
+import { getCollection } from 'astro:content';
+
+interface Props {
+	seriesId: string;
+	currentSlug: string;
+	curriculumHref?: string;
+}
+
+const { seriesId, currentSlug, curriculumHref } = Astro.props;
+
+// Same draft-visibility rule as [slug].astro: drafts are hidden only in prod,
+// so a draft post can still see itself (and its siblings) in dev.
+const allWriting = await getCollection('writing', ({ data }) => !(import.meta.env.PROD && data.draft));
+
+const parts = allWriting
+	.filter((e) => e.data.series?.id === seriesId)
+	.sort((a, b) => a.data.series!.part - b.data.series!.part)
+	.map((e) => ({
+		part: e.data.series!.part,
+		blurb: e.data.series!.blurb,
+		slug: e.slug,
+		isCurrent: e.slug === currentSlug,
+	}));
+
+const seriesTitle = allWriting.find((e) => e.data.series?.id === seriesId)?.data.series?.title ?? seriesId;
+
+const spinoffsByPart = new Map<number, { label: string; slug: string; isCurrent: boolean }[]>();
+for (const e of allWriting) {
+	if (e.data.spinoffOf?.seriesId !== seriesId) continue;
+	const list = spinoffsByPart.get(e.data.spinoffOf.part) ?? [];
+	list.push({ label: e.data.spinoffOf.label, slug: e.slug, isCurrent: e.slug === currentSlug });
+	spinoffsByPart.set(e.data.spinoffOf.part, list);
+}
+---
+
+<nav class="series-nav">
+  <div class="series-eyebrow">$ cat series/{seriesId}.log &mdash; {seriesTitle}</div>
+  <div class="series-track-scroll">
+  <div class="series-track">
+    {parts.map((p) => (
+      <div class:list={['series-node-col', { current: p.isCurrent }]}>
+        {p.isCurrent ? (
+          <span class="series-dot">{p.part}</span>
+        ) : (
+          <a class="series-dot" href={`/writing/${p.slug}`} title={p.blurb}>{p.part}</a>
+        )}
+        <div class="series-part-info">
+          <span class="series-label">Part {p.part}</span>
+          {!p.isCurrent && (
+            <a class="series-blurb" href={`/writing/${p.slug}`}>{p.blurb}</a>
+          )}
+        </div>
+        {spinoffsByPart.get(p.part) && (
+          <div class="series-branch">
+            <span class="series-branch-heading">Deep Dives</span>
+            {spinoffsByPart.get(p.part)!.map((s) => (
+              <div class:list={['series-branch-item', { current: s.isCurrent }]}>
+                {s.isCurrent ? (
+                  <span>{s.label}</span>
+                ) : (
+                  <a href={`/writing/${s.slug}`}>{s.label}</a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+  </div>
+  {curriculumHref && (
+    <a class="series-curriculum-link" href={curriculumHref}>view the curriculum &rarr;</a>
+  )}
+</nav>
+
+<style>
+  .series-nav {
+    margin: 0 0 2.5rem;
+    padding: 1.1rem 1.25rem 1.25rem;
+    border: 1px solid var(--grid-color);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  }
+  .series-eyebrow {
+    font-size: 11px;
+    color: var(--accent-color);
+    margin-bottom: 1.1rem;
+  }
+  .series-track-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* old Edge */
+  }
+  .series-track-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+  .series-track {
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    gap: 2.75rem;
+    padding: 8px 4px 4px;
+    width: max-content;
+  }
+  .series-track::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 12px;
+    right: 12px;
+    height: 1px;
+    background: var(--grid-color);
+  }
+  .series-node-col {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 1;
+    flex-shrink: 0;
+    width: 150px;
+    overflow-wrap: break-word;
+  }
+  .series-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-color);
+    border: 2px solid var(--grid-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+  a.series-dot:hover {
+    border-color: var(--accent-color);
+  }
+  .series-node-col.current .series-dot {
+    border-color: var(--accent-color);
+    background: var(--accent-color);
+    color: #fff;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  }
+  .series-part-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+  }
+  .series-label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-color);
+    opacity: 0.5;
+  }
+  .series-blurb {
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.75;
+    text-decoration: none;
+    line-height: 1.3;
+  }
+  a.series-blurb:hover {
+    color: var(--accent-color);
+    opacity: 1;
+  }
+  .series-node-col.current .series-label {
+    opacity: 1;
+    color: var(--accent-color);
+    font-weight: 600;
+  }
+  .series-branch {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--grid-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .series-branch-heading {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-color);
+    opacity: 0.5;
+    margin-bottom: 2px;
+  }
+  .series-branch-item {
+    font-size: 11px;
+    color: var(--text-color);
+    opacity: 0.75;
+    line-height: 1.3;
+  }
+  .series-branch-item a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .series-branch-item a:hover {
+    color: var(--accent-color);
+  }
+  .series-branch-item.current {
+    opacity: 1;
+    color: var(--accent-color);
+    font-weight: 600;
+  }
+  .series-curriculum-link {
+    display: inline-block;
+    margin-top: 1.25rem;
+    font-size: 12px;
+    color: var(--accent-color);
+    text-decoration: none;
+  }
+  .series-curriculum-link:hover {
+    opacity: 0.8;
+  }
+</style>
