@@ -13,6 +13,9 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
+  redirects: {
+    '/writing/byte-packing': '/writing/strata-rs-part-1-byte-packing',
+  },
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],

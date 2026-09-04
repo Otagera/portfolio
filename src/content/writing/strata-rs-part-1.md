@@ -1,0 +1,313 @@
+---
+title: "Rewriting StrataDB in Rust, Part 1: MemTable and Naive Persistence"
+date: "2026-09-01"
+readTime: "10 min"
+summary: "Starting the StrataDB rewrite in Rust: the MemTable, why BTreeMap, modeling tombstones with Option<T>, hand-rolling a binary record format, and a naive on-disk engine tested against real byte output."
+tags: ["rust", "database", "systems", "strata-db"]
+draft: false
+series:
+  id: "strata-rs-rewrite"
+  title: "Strata DB — Rust Rewrite"
+  part: 1
+  blurb: "MemTable and naive on-disk persistence"
+---
+
+So previously I took inspiration from [this](https://www.nan.fyi/database) and with AI (Gemini mostly) was able to come up with some working KV DB, then Document style, then eventually a passable SQL DB, all built on top of each other. On some level it's the most impressive thing I have done (with the caveat that AI was involved — feel how you feel about it, because I sure have not-too-good feelings about it). So after going around thinking about what to work on next, following a couple of "games," I knew that DBs were way more than what I had done — for one, I wasn't able to use it in even a dummy application. So I went back to Claude and asked it to suggest some new directions to go with it, and it suggested distribution (which would involve replication, partitioning, sharding, etc.) — good stuff. But then I thought, why not do this whole thing in Rust? (I am not a masochist, but yeah, this was a weird decision when my understanding of Rust was, and still is, sparse.) So Rust it was: start the whole thing from the beginning and do what we did before.
+
+So this post is about that rewrite, mostly. Before work began I asked Claude to review the TypeScript code and draft a curriculum, factoring in the way the TS version was built up from a simple file storing KVs (the git history was helpful here). We did, and the past couple of weeks have been about that start.
+
+## The MemTable
+
+As highlighted in [that post by Nanda](https://www.nan.fyi/database), every DB is built on a KV store, which can be a simple text file — something we explored before building further upward. What that indicates is that even in memory, as we process new information, we need a way to keep key-value pairs around. Enter the Memtable (as in Memory table, get it? _wink_).
+
+So we started with the Memtable: an in-memory sorted map. Think of it as a map, as simple as that — the code below shows we use `BTreeMap` for the data in our memtable struct.
+
+```rust
+pub struct MemTable {
+    data: BTreeMap<Vec<u8>, Option<Vec<u8>>>,
+    size: usize,
+}
+```
+
+<span class="note"><button type="button" popovertarget="note-hashmap" class="note-text">2 hashmap options</button><span popover id="note-hashmap" class="note-body">In Rust there are 2 hashmap data structures we could use, but we went with BTreeMap because it's sorted automatically by keys.</span></span>
+
+As with every map, we need to be able to add new pairs, access the value of a pair, delete a pair by its key, get the map's size, and clear the whole thing if need be. Which brings us to answering some questions about the MemTable struct above.
+
+1. Why are we using `Vec<u8>`? Call me crazy, but I thought since we're using Rust, why not use binary files instead of plain files for persistent storage? (On some level everything might be a binary file, and you can do this in TypeScript too, to a degree.) My first thought was that since it's Rust, it would be more native to deal with binary than in TypeScript, where JSON is widely used and parsing is straightforward. Secondly, I wanted the experience of dealing with binaries (spoiler alert: I have indeed learnt some things already about encoding and decoding into binary).
+2. Why `Option<Vec<u8>>`? We've answered the `Vec<u8>` part; the `Option<T>` part is how we handle tombstones. A tombstone is a way to signal that something isn't there, when something was there before. When I get to explaining the engine (we use LSM, though I want b-tree as another option once we get to SQL) I'll explain better, but in short: in LSM, writes are append-only, because looking up a row and then rewriting it in place is expensive. So you simply append a new line marking it as updated with a deletion marker — the tombstone — and later, during compaction, the engine recognizes that key-value pair as deleted. Rust provides `Option`, a built-in enum in the standard library, to represent either the presence of a value (`Some`) or its total absence (`None`). So we can check like this:
+
+   ```rust
+   match value {
+     Some(inner_value) => {
+       // do something with inner_value
+     }
+     None => {
+       // do something else
+     }
+   }
+   ```
+
+3. Size — this is pretty straightforward: we just want a handy way to keep track of size as we change the data store, so it's easy to get at any point.
+
+## Naive On-Disk Persistence
+
+As stated earlier, we persist data to disk. In more sophisticated systems, how that's stored gets a lot more advanced, and we'll get to that as we go, but for a start we just need a way to read and write to disk. So the engine simply consists of our memtable and an open file handle for reading and writing:
+
+```rust
+pub struct Engine {
+    mem_table: MemTable,
+    file: File,
+}
+```
+
+When we were dealing with a plain text file, we just had to figure out end-of-line or end-of-file — something like:
+
+```text
+key:value\nkey:$nullified\n
+```
+
+But dealing with binary, it's just a stream of bytes, so we need a standard way of representing information in that stream so we can decode it correctly when reading it back. For a single key-value pair, we went with:
+
+`key_size -> key -> value_existence -> value_size -> value`
+
+Because we have a known, expected sequence, we can read through the stream using that as a guide. A few things worth explaining first:
+
+1. Sizes are 4 bytes (`[0u8; 4]`). Four bytes can hold up to 4,294,967,296 (2³²) possible values, which is plenty of room for the size of a key or value. So before encoding, the size of the key and value are recorded first.
+2. We track `value_existence` — since we use tombstones (discussed above), a value might not exist, so we tell the reader, while it's decoding, whether or not to expect a value at all. This is a single `0` (not present) or `1` (present).
+3. There's no end-of-line marker. Since we already know the expected sequence, we can read through it directly, keeping track of a cursor as we go — the sequence looks like this:
+
+   ```text
+   offset: 0   1   2   3   4  5  6  7    8       9 10 11    12 13  14 15 16
+   bytes:  00  00  00  03 6b 65 79 01   00      00 00 05    76 61  6c 75 65
+           └─key_size───┘ └───key───┘ └─tag─┘ └value_size┘  └────value────┘
+   ```
+
+One thing that might look odd here: this is hex, not base-10 binary. Most tools for peeking at raw bytes (like `xxd`) default to hex, and once you try reading actual binary you see why (see the [outputs below](#some-outputs)) — 17 bytes as binary is 17 × 8 = 136 characters wide, unreadable on one line. Hex packs the same 17 bytes into just 34 characters, since each hex digit is exactly 4 bits (a nibble), so two hex digits cover a full byte. Binary is the literal ground truth; hex is that same data compressed into something you can actually scan.
+
+## Encoding a Record
+
+So, since we have our sequence, next is to run through how we encode our data. The sequence for encoding our key-value pair:
+
+1. We get the sizes as discussed above — straightforward for the key; for the value we use `map_or` to default to `0` when it's `None`, or the actual `len` otherwise.
+2. We push the key size (after byte-packing it) and the key. We use `extend` here rather than `push` or `append`, which sort of do similar things.
+3. We match on whether the value exists:
+   1. When it exists, we first push the value-existence tag (`1u8`), then the value size (also byte-packed), then the value — all via `extend`, same as the key.
+   2. When it doesn't exist, we simply push a `0u8`.
+4. Return the encoded record.
+
+> **push vs. extend vs. append**
+>
+> - `.push(x)` appends exactly one single element. The tag (`1u8` or `0u8`) is just one lone byte — not a length, not multiple bytes, just a single flag value. There's nothing to unpack, so `.push()` is the direct tool for it.
+> - `.extend(iterable)` appends every element of something iterable, one at a time. `byte_packing(key_size as u32)` returns `[u8; 4]` — four separate bytes bundled in an array — and `key`/`inner_value` are `Vec<u8>`, however many bytes make up the actual data. In both cases each individual byte is pushed onto `encoded_record` in sequence, not the array/Vec nested inside as one blob. `.extend()` is what unpacks a collection like that, byte by byte, onto the end.
+> - `.append()` — I tried this early on, thinking it'd be the right tool, but it's quite different from both: it drains an entire other Vec into this one, and specifically requires a `&mut Vec<T>` as its argument, not an array or an owned value.
+
+```rust
+pub(crate) fn encode_record(key: Vec<u8>, value: Option<Vec<u8>>) -> Vec<u8> {
+    let key_size = key.len();
+    let value_size = value.as_ref().map_or(0, Vec::len);
+    let mut encoded_record = vec![];
+    encoded_record.extend(byte_packing(key_size as u32));
+    encoded_record.extend(key);
+
+    match value {
+        Some(inner_value) => {
+            encoded_record.push(1u8);
+            encoded_record.extend(byte_packing(value_size as u32));
+            encoded_record.extend(inner_value);
+        }
+        None => {
+            encoded_record.push(0u8);
+        }
+    }
+
+    encoded_record
+}
+```
+
+## Decoding a Record
+
+As mentioned earlier, we use a cursor to keep track of where we are during decoding. We already know the sequence, so we make use of that to step through it and get our data back:
+
+1. Start the cursor at `0`.
+2. Read the first 4 bytes — the `key_size` bytes — and decode them to get the key size. Advance the cursor by 4.
+3. Given the key size and the cursor, read that exact chunk of data as the key. Advance the cursor by the key's length.
+4. Read the tag, which is always 1 byte, and advance the cursor by 1.
+5. Match on the tag to get the value:
+   1. When the tag is `1`, do the same process as the key: read the value-size chunk, decode it, then read the value itself, advancing the cursor throughout. Return `Some(value)`.
+   2. When the tag is `0`, return `None`.
+   3. For anything else, idiomatically in Rust, this needs to be unreachable or an error.
+6. Return the `Record { key, value }` along with the cursor, which also tells the caller where this record ended.
+
+```rust
+fn decode_record(encoded_record: &[u8]) -> (Record, usize) {
+    let mut cursor = 0;
+    let key_len_bytes: [u8; 4] = encoded_record[cursor..4].try_into().unwrap();
+    cursor += 4;
+    let key_len = decode_packed_byte(key_len_bytes);
+    let key = encoded_record[cursor..cursor + key_len as usize].to_vec();
+    cursor += key_len as usize;
+    let tag = encoded_record[cursor];
+    cursor += 1;
+
+    let value: Option<Vec<u8>> = match tag {
+        1 => {
+            let value_len_bytes: [u8; 4] = encoded_record[cursor..cursor + 4].try_into().unwrap();
+            cursor += 4;
+            let value_len = decode_packed_byte(value_len_bytes);
+            let value_to_return =
+                Some(encoded_record[cursor..cursor + value_len as usize].to_vec());
+            cursor += value_len as usize;
+            value_to_return
+        }
+        0 => None,
+        _ => unreachable!("Tag should only ever be 0 or 1."),
+    };
+    (Record { key, value }, cursor)
+}
+```
+
+## Replaying Data from the Data File
+
+Taking it one step further, we have a replay function. Its job is to replay the data in our binary file, insert it into a fresh memtable, and return that memtable. For our naive persistence it's simple: read the file, pass the bytes to the function, get back the memtable.
+
+Here's how it fits into the DB's cycle: when we add new data, we write it to disk and into the in-memory memtable at the same time; reads come from the memtable since it's already in memory, which is faster. If the system fails and the in-memory data is gone, we reach for this replay function to reload the data from disk back into a fresh memtable, and the DB process can proceed. This is a very crude, naive version of that idea — once we build out more advanced features (like SSTables and the WAL) we'll use this a lot more, and refine it.
+
+```rust
+pub(crate) fn replay(buffer: &[u8]) -> MemTable {
+    let mut memtable = MemTable::new();
+    let mut index = 0;
+
+    while index != buffer.len() {
+        let (record, cursor) = decode_record(&buffer[index..]);
+        memtable.insert(record.key, record.value);
+        index += cursor;
+    }
+    memtable
+}
+```
+
+## The Naive Engine
+
+As I have stated above, the engine is naive and for some operations it wraps around the memtable.
+Coming from JS/TS and some experience with OOP and Java when you have a new class the constructor is usually a keyword (constructor in ES6 JavaScript and in Java the class name) and you invoke it with `new ClassName()` but I was surprised when I learnt in Rust the constructor-like syntax is you can name that function anything in the struct implementation as long as it returns Self. So I used open for this seeing that std::fs::File also uses open.
+
+```rust
+impl Engine {
+    pub fn open(file_name: &str) -> Result<Self> {
+        let mut file = OpenOptions::new()
+            .read(true)
+            .append(true)
+            .create(true)
+            .open(file_name)?;
+        let mut all_data: Vec<u8> = Vec::new();
+
+        file.read_to_end(&mut all_data)?;
+
+        let buffer: &[u8] = &all_data;
+        let mem_table = replay(buffer);
+
+        Ok(Self { mem_table, file })
+    }
+
+    pub fn get(&self, key: &[u8]) -> Option<Option<Vec<u8>>> {
+        todo!()
+    }
+
+    pub fn size(&self) -> usize {
+        self.mem_table.size()
+    }
+
+    pub fn clear(&mut self) -> Result<()> {
+        todo!()
+    }
+
+    pub fn insert(&mut self, key: Vec<u8>, value: Option<Vec<u8>>) -> Result<Option<Option<Vec<u8>>>> {
+        todo!()
+    }
+
+    pub fn delete(&mut self, key: Vec<u8>) -> Result<Option<Option<Vec<u8>>>> {
+        todo!()
+    }
+}
+
+```
+
+## Tests
+
+So from my little understanding of databases from listening to podcasts and YouTube videos (I will link to them below) tests always seemed like a very big deal. The guys at Turso, for instance, had an extensive test suite to ensure compatibility with the SQLite they were re-writing in Rust, and even SQLite itself is famous for its extensive tests. So with this in mind from the earlier TypeScript version I had the AI agent write tests for each module we worked on. So in coming to Rust that idea followed. But from the start I wanted to write tests by hand myself, rather than lean on AI for it, so I could actually understand how it's done idiomatically in Rust.
+
+Since it is just a naive persistence for now, the tests were pretty easy, just to verify each new function (byte_packing, decode_packed_byte, encoding, etc.) and how they all tie in together but I needed to get into some practice with it and to ensure that going forward we always have tests for everything and maybe eventually try our hand with those world famous tests they keep talking about.
+
+Two worth showing: one that pins down the exact byte sequence from the record format above, and one that proves data actually survives a restart — the whole point of writing to disk in the first place.
+
+```rust
+#[test]
+fn test_encode_record_with_value() {
+    let encoded = encode_record(b"hi".to_vec(), Some(b"yo".to_vec()));
+    assert_eq!(
+        encoded,
+        vec![0, 0, 0, 2, b'h', b'i', 1, 0, 0, 0, 2, b'y', b'o']
+    );
+}
+```
+
+```rust
+fn temp_path(name: &str) -> String {
+    let path = std::env::temp_dir().join(format!("strata_test_{name}.bin"));
+    let _ = fs::remove_file(&path);
+    path.to_str().unwrap().to_string()
+}
+
+#[test]
+fn test_engine_persists_across_reopen() {
+    let path = temp_path("engine_reopen");
+
+    {
+        let mut engine = Engine::open(&path).unwrap();
+        engine.insert(b"hi".to_vec(), Some(b"yo".to_vec())).unwrap();
+        engine.insert(b"ok".to_vec(), None).unwrap();
+        // engine (and its file handle) dropped at the end of this block
+    }
+
+    let engine = Engine::open(&path).unwrap();
+    assert_eq!(engine.get(b"hi"), Some(Some(b"yo".to_vec())));
+    assert_eq!(engine.get(b"ok"), Some(None));
+
+    let _ = fs::remove_file(&path);
+}
+```
+
+## Some Outputs
+
+Same key/value pair as the diagram above (`"key"` → `"value"`), now actually written to disk and inspected three ways — `xxd` and `hexdump -C` both show the hex form (same bytes, different formatting conventions), and `xxd -b` shows the raw binary, which is exactly the "unreadable on one line" problem mentioned earlier.
+
+```console
+❯ xxd test.bin
+00000000: 0000 0003 6b65 7901 0000 0005 7661 6c75  ....key.....valu
+00000010: 65
+
+❯ hexdump -C test.bin
+00000000  00 00 00 03 6b 65 79 01  00 00 00 05 76 61 6c 75  |....key.....valu|
+00000010  65                                                |e|
+00000011
+
+❯ xxd -b test.bin
+00000000: 00000000 00000000 00000000 00000011 01101011 01100101  ....ke
+00000006: 01111001 00000001 00000000 00000000 00000000 00000101  y.....
+0000000c: 01110110 01100001 01101100 01110101 01100101           value
+```
+
+## Wrapping Up
+
+With that we've come to the end of the first post in this series. We have a MemTable backed by `BTreeMap`, tombstones modeled with `Option<T>`, a hand-rolled binary record format to get key-value pairs to and from disk, and a naive engine gluing the two together plus my first real attempt at writing idiomatic Rust tests myself.
+
+It's all deliberately crude. One file, no compaction, no write-ahead log and no SSTables. That's the point for now — get something that actually round-trips through disk before making it good. Next up is replacing this single append-only file with something closer to how a real LSM engine works: SSTables, a WAL, compaction. More on that as it happens.
+
+This post, and the byte-packing one, have been pretty taxing to write over the past few days seeing that I haven't done these in a while and coming after actually writing the code that I were difficult to understand at times. I hope to keep going with this: if you fancy this sort of stuff, you're in for a treat, since you get to learn as I learn.
+
+Thank you for reading this far, see you next time. Cheers
+
+## References
+
+1. [Reliability Lessons From SQLite - Richard Hipp | SSW 2026](https://youtu.be/V_qzqY1bb7I?si=uMfjJFEQjp2-13lZ)
+2. [Will Turso Be The Better SQLite? (with Glauber Costa) - Developer Voices](https://pod.link/developer-voices/episode/YmYwYjM0YmQtOTJjNi00ZmE0LTkyYzEtNTIyN2JmOTU0NWE0)
