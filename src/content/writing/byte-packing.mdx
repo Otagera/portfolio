@@ -12,7 +12,13 @@ spinoffOf:
 
 import ByteShiftWidget from "../../components/writing/ByteShiftWidget.astro";
 
-Byte packing takes a number, say a `u32`, and breaks it into its individual `u8` bytes, and back again. Here's the bit manipulation behind it, and why the order you pack those bytes in matters.
+Picture a suitcase with a fixed size limit, and you need to get a bunch of stuff across to another side, say into a file, across a network, wherever. Until I decided to work with binary files, I had never thought about this:
+The thing is a file or a socket doesn't know what a `u32` is. At that layer it's just raw bytes, 0–255 each, and there's no "write the number as it is" button.
+
+Back to our example, the channel only takes one suitcase-sized chunk at a time (a byte), and a `u32` can be in the billions, way too much for one trip. So you split it into four byte-sized pieces, carry them across one at a time, and put them back together on the other side.
+That's byte packing: taking a number apart into its individual `u8` bytes, and back again. Here's the bit manipulation behind it, and why the order you pack those bytes in matters.
+
+Worth being clear about what actually needs this, since it's not about size in bytes. In the naive DB I am working on, the key and value in a record can easily be more than one byte long, but they're already just raw bytes which can be read back in order, byte-for-byte, no reconstruction needed. The tag is the same idea at one byte: a single `0` or `1`, nothing to combine. But a size is different, in the sense that it's not a sequence of bytes, it's one number, and you need to decide how it's spread across multiple bytes so it can be put back together correctly. So packing is for numbers whose value has to be reconstructed from multiple bytes by position, not for anything that's already just well... bytes.
 
 A quick refresher on the integer types involved:
 
