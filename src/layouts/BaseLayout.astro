@@ -119,15 +119,21 @@ const { title, description = "Backend Engineer specializing in distributed syste
 
 	html {
 		scroll-behavior: smooth;
+		overflow-x: clip;
+		/* Clears the fixed header when jumping to an in-page anchor (e.g. TOC
+		   links) — without this, the target heading lands flush with the
+		   viewport top and ends up hidden behind the header. */
+		scroll-padding-top: 96px;
 	}
 
 	body {
 		background-color: var(--bg-color);
 		color: var(--text-color);
 		background-size: 20px 20px;
-		background-image: 
+		background-image:
 			radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
 		background-attachment: fixed;
+		overflow-x: clip;
 	}
 
 	/* The Terminal Glow Effect */

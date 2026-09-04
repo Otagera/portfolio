@@ -4,9 +4,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import SeriesNav from '../../components/writing/SeriesNav.astro';
+import TableOfContents from '../../components/writing/TableOfContents.astro';
 import { getViews, incrementViews } from '../../lib/db';
 import '../../styles/annotations.css';
 import '../../styles/writing-widgets.css';
+import '../../styles/content.css';
 
 const { slug } = Astro.params;
 
@@ -29,7 +31,7 @@ const curriculum = seriesId
 	? (await getCollection('curricula')).find((c) => c.data.seriesId === seriesId)
 	: null;
 
-const { Content } = await entry.render();
+const { Content, headings } = await entry.render();
 
 const formatDate = (date: Date) => {
 	return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -68,7 +70,8 @@ const formatDate = (date: Date) => {
   </Fragment>
   
   <Header />
-  <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors">
+  <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors relative">
+    <TableOfContents headings={headings} />
     <div class="mb-12">
       <div class="text-teal-600 dark:text-teal-400 mb-4 transition-colors">$ cat writing/{slug}.md</div>
       <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4 transition-colors">{entry.data.title}</h1>

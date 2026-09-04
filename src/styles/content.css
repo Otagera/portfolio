@@ -1,0 +1,24 @@
+/* General prose-content formatting helpers, distinct from the interactive
+   widget chrome in writing-widgets.css. */
+
+/* For tables whose cells are short, fixed-format tokens (bits, hex, byte
+   grids) rather than wrapping prose — e.g. byte-packing's worked-example
+   tables. Letting these shrink-to-fit on narrow screens turns them into an
+   unreadable, multi-line-per-cell mess; scrolling the table at its natural
+   width reads far better. Don't apply this to tables with prose cells
+   (like a trade-off table with full-sentence cells) — those should keep
+   wrapping normally. */
+.wide-table {
+	overflow-x: auto;
+	margin: 1.5rem 0;
+	-webkit-overflow-scrolling: touch;
+}
+
+.wide-table table {
+	margin: 0;
+}
+
+.wide-table th,
+.wide-table td {
+	white-space: nowrap;
+}

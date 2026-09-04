@@ -3,6 +3,7 @@ import { getEntry } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import TableOfContents from '../../components/writing/TableOfContents.astro';
 import '../../styles/curriculum.css';
 
 const { slug } = Astro.params;
@@ -19,7 +20,7 @@ if (!entry) {
 
 const project = entry.data.project ? await getEntry('projects', entry.data.project) : null;
 
-const { Content } = await entry.render();
+const { Content, headings } = await entry.render();
 
 const formatDate = (date: Date) => {
 	return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -31,7 +32,8 @@ const formatDate = (date: Date) => {
   description={entry.data.summary}
 >
   <Header />
-  <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors curriculum-article">
+  <article class="prose dark:prose-invert prose-teal max-w-none pt-12 transition-colors curriculum-article relative">
+    <TableOfContents headings={headings} />
     <div class="mb-12">
       <div class="text-teal-600 dark:text-teal-400 mb-4 transition-colors">$ cat curriculum/{slug}.mdx</div>
       <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4 transition-colors">{entry.data.title}</h1>

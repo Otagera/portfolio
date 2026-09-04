@@ -1,0 +1,175 @@
+---
+interface Heading {
+	depth: number;
+	slug: string;
+	text: string;
+}
+
+interface Props {
+	headings: Heading[];
+}
+
+const { headings } = Astro.props;
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+const show = items.length >= 4;
+---
+
+{show && (
+  <>
+    <nav class="toc-sidebar" aria-label="Table of contents">
+      <div class="toc-sticky">
+        <div class="toc-eyebrow">$ ls headings/</div>
+        <ul>
+          {items.map((h) => (
+            <li class:list={[`toc-item`, `toc-depth-${h.depth}`]}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
+
+    <button type="button" class="toc-fab" popovertarget="toc-overlay" aria-label="Table of contents">
+      &equiv;
+    </button>
+    <div id="toc-overlay" popover="auto" class="toc-overlay">
+      <div class="toc-eyebrow">$ ls headings/</div>
+      <ul>
+        {items.map((h) => (
+          <li class:list={[`toc-item`, `toc-depth-${h.depth}`]}>
+            <a href={`#${h.slug}`}>{h.text}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <script>
+      // popovertarget/popovertargetaction are spec'd for <button>, not <a> —
+      // an anchor's href navigation doesn't close the popover on its own.
+      document.querySelectorAll('#toc-overlay a').forEach((a) => {
+        a.addEventListener('click', () => {
+          (document.getElementById('toc-overlay') as (HTMLElement & { hidePopover?: () => void }) | null)?.hidePopover?.();
+        });
+      });
+    </script>
+  </>
+)}
+
+<style>
+  .toc-sidebar {
+    display: none;
+  }
+  .toc-fab {
+    display: none;
+  }
+
+  @media (min-width: 1280px) {
+    .toc-sidebar {
+      display: block;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 100%;
+      width: 190px;
+      margin-right: 2rem;
+    }
+    .toc-sticky {
+      position: sticky;
+      top: 96px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+  }
+
+  .toc-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--accent-color);
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    margin-bottom: 0.6rem;
+  }
+
+  .toc-sidebar ul,
+  .toc-overlay ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .toc-item a {
+    display: block;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-color);
+    opacity: 0.65;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    padding-left: 0.6rem;
+  }
+  .toc-item a:hover {
+    opacity: 1;
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+  }
+  .toc-depth-3 a {
+    padding-left: 1.4rem;
+    font-size: 11px;
+  }
+
+  /* Mobile / narrow: floating button + native popover, no JS needed for
+     open/dismiss/Escape/outside-click — same technique as sidenotes in
+     annotations.css. */
+  @media (max-width: 1279px) {
+    .toc-fab {
+      display: flex;
+      position: fixed;
+      right: 1.25rem;
+      bottom: 1.25rem;
+      z-index: 40;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      line-height: 1;
+      border: 1px solid var(--grid-color);
+      background: var(--bg-color);
+      color: var(--accent-color);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+    }
+    .toc-fab:hover {
+      border-color: var(--accent-color);
+    }
+  }
+
+  .toc-overlay {
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  .toc-overlay:popover-open {
+    position: fixed;
+    inset: auto 1rem 1rem 1rem;
+    width: auto;
+    max-width: none;
+    max-height: 60vh;
+    overflow-y: auto;
+    margin: 0;
+    border-radius: 8px;
+    border: 1px solid var(--grid-color);
+    background: var(--bg-color);
+    padding: 1rem 1.25rem;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+  }
+  @media (min-width: 1280px) {
+    .toc-overlay {
+      display: none;
+    }
+  }
+</style>
