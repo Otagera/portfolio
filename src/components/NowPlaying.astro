@@ -1,43 +1,94 @@
 ---
-import { getNowPlaying } from '../lib/lastfm';
+import { getLatestScrobble } from '../lib/maloja';
+import { formatRelativeTime } from '../lib/time';
 
-const LASTFM_API_KEY = import.meta.env.LASTFM_API_KEY;
-const LASTFM_USERNAME = import.meta.env.LASTFM_USERNAME;
-
-const track = (LASTFM_API_KEY && LASTFM_USERNAME) 
-  ? await getNowPlaying(LASTFM_USERNAME, LASTFM_API_KEY) 
-  : null;
-
-const isPlaying = track?.isPlaying;
+const track = await getLatestScrobble();
+const initialRelative = track ? formatRelativeTime(track.playedAt) : '';
 ---
 
-{track && (
-  <div class="flex flex-col space-y-4 pt-12">
-    <div class="text-teal-600 dark:text-teal-400">$ cat signals/current_vibe.json</div>
-    <div class="group relative flex items-center space-x-4 border-l-2 border-gray-100 dark:border-gray-800 pl-6 py-2 hover:border-teal-500 transition-all duration-300">
-      {isPlaying && (
-        <div class="absolute -left-[5px] top-1/2 -translate-y-1/2 w-2 h-2 bg-teal-500 rounded-full animate-ping"></div>
-      )}
-      
-      <div class="flex-1 space-y-1 min-w-0 pr-4">
-        <div class="flex items-center justify-between gap-4">
-          <span class="text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-bold truncate">
-            {track.type === 'podcast' ? (isPlaying ? "Currently Tuning In" : "Recent Podcast") : (isPlaying ? "Currently Listening" : "Recently Played")}
-          </span>
-          <a href={track.url} target="_blank" class="text-[10px] text-teal-600 dark:text-teal-400 hover:underline font-mono whitespace-nowrap">
-            last.fm &rarr;
-          </a>
-        </div>
-        
-        <div class="flex flex-col">
-          <span class="text-lg font-bold text-gray-800 dark:text-gray-200 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors truncate">
-            {track.name}
-          </span>
-          <span class="text-sm text-gray-500 dark:text-gray-400 font-mono truncate">
-            {track.artist} — {track.album}
-          </span>
-        </div>
+<div
+  class="flex flex-col space-y-4 pt-12"
+  id="now-playing-widget"
+  data-played-at={track?.playedAt ?? ''}
+  hidden={!track}
+>
+  <div class="text-teal-600 dark:text-teal-400">$ cat signals/current_vibe.json</div>
+  <div class="group relative flex items-center space-x-4 border-l-2 border-gray-100 dark:border-gray-800 pl-6 py-2 hover:border-teal-500 transition-all duration-300">
+    <div class="flex-1 space-y-1 min-w-0 pr-4">
+      <div class="flex items-center justify-between gap-4">
+        <span class="text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-bold truncate">
+          Last Played
+        </span>
+        <span
+          class="text-[10px] text-gray-400 dark:text-gray-500 font-mono whitespace-nowrap"
+          id="now-playing-relative"
+        >
+          {initialRelative}
+        </span>
+      </div>
+
+      <div class="flex flex-col">
+        <span
+          class="text-lg font-bold text-gray-800 dark:text-gray-200 transition-colors truncate"
+          id="now-playing-title"
+        >
+          {track && `🎵 ${track.title}`}
+        </span>
+        <span
+          class="text-sm text-gray-500 dark:text-gray-400 font-mono truncate"
+          id="now-playing-artist"
+        >
+          {track?.artist}
+        </span>
       </div>
     </div>
   </div>
-)}
+</div>
+
+<script>
+  import { formatRelativeTime } from '../lib/time';
+
+  const POLL_INTERVAL_MS = 45_000;
+  const TICK_INTERVAL_MS = 15_000;
+
+  const widget = document.getElementById('now-playing-widget');
+  const titleEl = document.getElementById('now-playing-title');
+  const artistEl = document.getElementById('now-playing-artist');
+  const relativeEl = document.getElementById('now-playing-relative');
+
+  if (widget) {
+    let playedAt = Number(widget.dataset.playedAt) || null;
+
+    const tickRelative = () => {
+      if (relativeEl && playedAt) {
+        relativeEl.textContent = formatRelativeTime(playedAt);
+      }
+    };
+
+    const refresh = async () => {
+      try {
+        const response = await fetch('/api/now-playing');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!data.artist || !data.title || !data.playedAt) {
+          widget.hidden = true;
+          return;
+        }
+
+        playedAt = data.playedAt;
+        widget.dataset.playedAt = String(data.playedAt);
+        if (titleEl) titleEl.textContent = `🎵 ${data.title}`;
+        if (artistEl) artistEl.textContent = data.artist;
+        widget.hidden = false;
+        tickRelative();
+      } catch {
+        // Network hiccup — keep showing the last known state rather than throwing.
+      }
+    };
+
+    tickRelative();
+    setInterval(tickRelative, TICK_INTERVAL_MS);
+    setInterval(refresh, POLL_INTERVAL_MS);
+  }
+</script>
