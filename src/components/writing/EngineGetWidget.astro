@@ -1,0 +1,126 @@
+<div class="writing-widget">
+  <div class="panel">
+    <div class="prompt-row">
+      <span class="sigil">$</span>
+      <span class="cmd" id="egw-promptCmd">engine.get(b"apple")</span>
+      <span class="cursor"></span>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">key</span>
+        <div class="chip-row" id="egw-keyChips">
+          <button type="button" class="chip" data-key="apple" aria-pressed="true">apple</button>
+          <button type="button" class="chip" data-key="banana" aria-pressed="false">banana</button>
+          <button type="button" class="chip" data-key="date" aria-pressed="false">date</button>
+          <button type="button" class="chip" data-key="mango" aria-pressed="false">mango</button>
+          <button type="button" class="chip" data-key="kiwi" aria-pressed="false">kiwi</button>
+        </div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="egw-flow" id="egw-flow"></div>
+    </div>
+    <div class="summary">
+      <span class="label">result =</span>
+      <span class="value" id="egw-summaryValue">engine.get(b"apple") = Some(Some(b"tart"))</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .egw-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  :global(.egw-node) {
+    padding: 9px 16px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--bg-well);
+    font-size: 13px;
+    text-align: center;
+    color: var(--fg);
+    max-width: 100%;
+  }
+  :global(.egw-node code) {
+    font-weight: 700;
+  }
+  :global(.egw-node.leaf) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  :global(.egw-arrow) {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 5px 0;
+  }
+</style>
+
+<script>
+  (function () {
+    var memtable = { apple: 'tart', banana: 'soft', date: 'dry', mango: null };
+    var state = { key: 'apple' };
+    var els = {
+      promptCmd: document.getElementById('egw-promptCmd'),
+      keyChips: document.getElementById('egw-keyChips'),
+      flow: document.getElementById('egw-flow'),
+      summaryValue: document.getElementById('egw-summaryValue'),
+    };
+
+    function node(text, isLeaf) {
+      var div = document.createElement('div');
+      div.className = 'egw-node' + (isLeaf ? ' leaf' : '');
+      div.innerHTML = text;
+      return div;
+    }
+    function arrow(text) {
+      var div = document.createElement('div');
+      div.className = 'egw-arrow';
+      div.textContent = text;
+      return div;
+    }
+    function render() {
+      var key = state.key;
+      els.promptCmd.textContent = 'engine.get(b"' + key + '")';
+      Array.prototype.forEach.call(els.keyChips.children, function (chip) {
+        chip.setAttribute('aria-pressed', chip.dataset.key === key);
+      });
+
+      els.flow.innerHTML = '';
+      els.flow.appendChild(node('mem_table.get(b"' + key + '")'));
+      els.flow.appendChild(arrow('↓'));
+      var present = Object.prototype.hasOwnProperty.call(memtable, key);
+      els.flow.appendChild(node('key present in map? &rarr; <strong>' + (present ? 'yes' : 'no') + '</strong>'));
+
+      var resultText;
+      if (!present) {
+        els.flow.appendChild(arrow('↓'));
+        els.flow.appendChild(node('return <code>None</code>', true));
+        resultText = 'engine.get(b"' + key + '") = None';
+      } else {
+        els.flow.appendChild(arrow('↓'));
+        var v = memtable[key];
+        els.flow.appendChild(node('value is Some or None? &rarr; <strong>' + (v === null ? 'None (tombstone)' : 'Some(v)') + '</strong>'));
+        els.flow.appendChild(arrow('↓'));
+        if (v === null) {
+          els.flow.appendChild(node('return <code>Some(None)</code>', true));
+          resultText = 'engine.get(b"' + key + '") = Some(None)';
+        } else {
+          els.flow.appendChild(node('return <code>Some(Some(b"' + v + '"))</code>', true));
+          resultText = 'engine.get(b"' + key + '") = Some(Some(b"' + v + '"))';
+        }
+      }
+      els.summaryValue.textContent = resultText;
+    }
+    els.keyChips.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      state.key = chip.dataset.key;
+      render();
+    });
+    render();
+  })();
+</script>

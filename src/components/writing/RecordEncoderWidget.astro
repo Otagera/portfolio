@@ -1,0 +1,417 @@
+<div class="writing-widget">
+  <div class="panel">
+    <div class="prompt-row">
+      <span class="sigil">$</span>
+      <span class="cmd" id="rew-promptCmd">./encode --key "key" --value "value"</span>
+      <span class="cursor"></span>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">view</span>
+        <div class="segmented" role="group" aria-label="View">
+          <button type="button" id="rew-viewEncode" aria-pressed="true">encode</button>
+          <button type="button" id="rew-viewDecode" aria-pressed="false">decode</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <span class="control-label">key</span>
+        <input type="text" id="rew-keyInput" class="rew-input" maxlength="10" value="key" spellcheck="false" />
+      </div>
+      <div class="control-group">
+        <span class="control-label">value</span>
+        <div class="segmented" role="group" aria-label="Value mode">
+          <button type="button" id="rew-modeValue" aria-pressed="true">has value</button>
+          <button type="button" id="rew-modeTombstone" aria-pressed="false">tombstone</button>
+        </div>
+      </div>
+      <div class="control-group" id="rew-valueGroup">
+        <span class="control-label">= </span>
+        <input type="text" id="rew-valueInput" class="rew-input" maxlength="10" value="value" spellcheck="false" />
+      </div>
+    </div>
+    <div class="stage">
+      <div class="field-legend" id="rew-legend">
+        <span class="tag key_size">key_size</span>
+        <span class="tag key">key</span>
+        <span class="tag flag">tag</span>
+        <span class="tag value_size">value_size</span>
+        <span class="tag value">value</span>
+      </div>
+      <div class="byte-strip" id="rew-byteStrip"></div>
+    </div>
+    <div class="summary">
+      <span class="label" id="rew-summaryLabel">bytes[] =</span>
+      <span class="value" id="rew-summaryValue">[]</span>
+    </div>
+    <div class="log" id="rew-log"></div>
+    <div class="playback" id="rew-playback">
+      <div class="transport">
+        <button type="button" class="tbtn" id="rew-btnReset" title="Reset">⟲</button>
+        <button type="button" class="tbtn" id="rew-btnPrev" title="Previous step">⏮</button>
+        <button type="button" class="tbtn primary" id="rew-btnPlay" title="Play">▶</button>
+        <button type="button" class="tbtn" id="rew-btnNext" title="Next step">⏭</button>
+      </div>
+      <span class="step-readout" id="rew-stepReadout">cursor = 0</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .rew-input {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--bg-page);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    width: 8ch;
+  }
+  .rew-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  #rew-valueGroup.hidden {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  #rew-playback.hidden {
+    display: none;
+  }
+  .field-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+  .field-legend .tag {
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    font-weight: 700;
+    opacity: 0.35;
+    transition: opacity 0.2s;
+  }
+  .field-legend .tag.revealed {
+    opacity: 1;
+  }
+  .field-legend .tag.key_size { --grp-color: #f59e0b; }
+  .field-legend .tag.key { --grp-color: #10b981; }
+  .field-legend .tag.flag { --grp-color: #8b5cf6; }
+  .field-legend .tag.value_size { --grp-color: #06b6d4; }
+  .field-legend .tag.value { --grp-color: var(--accent); }
+  :global(.rew-cell.grp-key_size) { --grp-color: #f59e0b; }
+  :global(.rew-cell.grp-key) { --grp-color: #10b981; }
+  :global(.rew-cell.grp-tag) { --grp-color: #8b5cf6; }
+  :global(.rew-cell.grp-value_size) { --grp-color: #06b6d4; }
+  :global(.rew-cell.grp-value) { --grp-color: var(--accent); }
+  .field-legend .tag {
+    color: var(--grp-color);
+    background: color-mix(in srgb, var(--grp-color) 14%, transparent);
+    border-color: color-mix(in srgb, var(--grp-color) 35%, transparent);
+  }
+  .byte-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0 2px;
+    min-height: 54px;
+  }
+  :global(.rew-cell) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: 4px 2px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--grp-color) 16%, var(--bg-well));
+    border: 1px solid color-mix(in srgb, var(--grp-color) 40%, transparent);
+    opacity: 1;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+  :global(.rew-cell.unrevealed) {
+    opacity: 0.25;
+    border-style: dashed;
+  }
+  :global(.rew-cell.current) {
+    border-width: 2px;
+    border-color: var(--grp-color);
+  }
+  :global(.rew-cell .hex) {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--grp-color);
+  }
+  :global(.rew-cell .ascii) {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  :global(.rew-cell.unrevealed .hex),
+  :global(.rew-cell.unrevealed .ascii) {
+    visibility: hidden;
+  }
+</style>
+
+<script>
+  (function () {
+    var state = { key: 'key', value: 'value', tombstone: false, view: 'encode', step: 0, playing: false };
+    var els = {
+      promptCmd: document.getElementById('rew-promptCmd'),
+      viewEncode: document.getElementById('rew-viewEncode'),
+      viewDecode: document.getElementById('rew-viewDecode'),
+      keyInput: document.getElementById('rew-keyInput'),
+      valueInput: document.getElementById('rew-valueInput'),
+      valueGroup: document.getElementById('rew-valueGroup'),
+      modeValue: document.getElementById('rew-modeValue'),
+      modeTombstone: document.getElementById('rew-modeTombstone'),
+      legend: document.getElementById('rew-legend'),
+      byteStrip: document.getElementById('rew-byteStrip'),
+      summaryLabel: document.getElementById('rew-summaryLabel'),
+      summaryValue: document.getElementById('rew-summaryValue'),
+      log: document.getElementById('rew-log'),
+      playback: document.getElementById('rew-playback'),
+      btnReset: document.getElementById('rew-btnReset'),
+      btnPrev: document.getElementById('rew-btnPrev'),
+      btnNext: document.getElementById('rew-btnNext'),
+      btnPlay: document.getElementById('rew-btnPlay'),
+      stepReadout: document.getElementById('rew-stepReadout'),
+    };
+    var enc = new TextEncoder();
+
+    function packU32(n) {
+      return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
+    }
+    function toAscii(b) {
+      return b >= 0x20 && b <= 0x7e ? String.fromCharCode(b) : '·';
+    }
+    // Same field order decode_record actually reads in: key_size, key, tag, [value_size, value].
+    function computeGroups() {
+      var keyBytes = Array.from(enc.encode(state.key));
+      var groups = [
+        { name: 'key_size', bytes: packU32(keyBytes.length) },
+        { name: 'key', bytes: keyBytes },
+        { name: 'tag', bytes: [state.tombstone ? 0 : 1] },
+      ];
+      if (!state.tombstone) {
+        var valueBytes = Array.from(enc.encode(state.value));
+        groups.push({ name: 'value_size', bytes: packU32(valueBytes.length) });
+        groups.push({ name: 'value', bytes: valueBytes });
+      }
+      return groups;
+    }
+    function legendClassFor(name) {
+      return name === 'tag' ? 'flag' : name;
+    }
+    function encodeLogLines(groups) {
+      var lines = [];
+      groups.forEach(function (g) {
+        if (g.name === 'key_size') {
+          var keyLen = Array.from(enc.encode(state.key)).length;
+          lines.push('key_size = byte_packing(' + keyLen + ') = [' + g.bytes.join(', ') + ']');
+        } else if (g.name === 'key') {
+          lines.push('key = "' + state.key + '" &rarr; [' + g.bytes.join(', ') + ']');
+        } else if (g.name === 'tag') {
+          lines.push('tag = ' + g.bytes[0] + (state.tombstone ? '  (tombstone &mdash; no value follows)' : '  (value present)'));
+        } else if (g.name === 'value_size') {
+          var valueLen = Array.from(enc.encode(state.value)).length;
+          lines.push('value_size = byte_packing(' + valueLen + ') = [' + g.bytes.join(', ') + ']');
+        } else if (g.name === 'value') {
+          lines.push('value = "' + state.value + '" &rarr; [' + g.bytes.join(', ') + ']');
+        }
+      });
+      return lines;
+    }
+    function decodeLogLine(g, cursorBefore) {
+      if (g.name === 'key_size') {
+        return 'cursor = ' + cursorBefore + ' &rarr; read 4 bytes [' + g.bytes.join(', ') + '] &rarr; key_size = ' + (g.bytes[3] | (g.bytes[2] << 8) | (g.bytes[1] << 16) | (g.bytes[0] << 24));
+      }
+      if (g.name === 'key') {
+        return 'cursor = ' + cursorBefore + ' &rarr; read ' + g.bytes.length + ' bytes &rarr; key = "' + state.key + '"';
+      }
+      if (g.name === 'tag') {
+        return 'cursor = ' + cursorBefore + ' &rarr; read 1 byte = ' + g.bytes[0] + (g.bytes[0] === 1 ? ' &rarr; value present' : ' &rarr; tombstone, done');
+      }
+      if (g.name === 'value_size') {
+        var vlen = Array.from(enc.encode(state.value)).length;
+        return 'cursor = ' + cursorBefore + ' &rarr; read 4 bytes [' + g.bytes.join(', ') + '] &rarr; value_size = ' + vlen;
+      }
+      if (g.name === 'value') {
+        return 'cursor = ' + cursorBefore + ' &rarr; read ' + g.bytes.length + ' bytes &rarr; value = "' + state.value + '"';
+      }
+      return '';
+    }
+    function render() {
+      var groups = computeGroups();
+      var totalSteps = groups.length;
+      if (state.step > totalSteps) state.step = totalSteps;
+
+      els.promptCmd.textContent = state.tombstone
+        ? './' + state.view + ' --key "' + state.key + '" --tombstone'
+        : './' + state.view + ' --key "' + state.key + '" --value "' + state.value + '"';
+      els.valueGroup.classList.toggle('hidden', state.tombstone);
+      els.viewEncode.setAttribute('aria-pressed', state.view === 'encode');
+      els.viewDecode.setAttribute('aria-pressed', state.view === 'decode');
+      els.playback.classList.toggle('hidden', state.view !== 'decode');
+
+      var revealedCount = state.view === 'encode' ? groups.length : state.step;
+
+      // legend: hide fields absent from a tombstone record; dim fields not yet
+      // revealed in decode mode (always fully lit in encode mode).
+      Array.prototype.forEach.call(els.legend.children, function (chip) {
+        var gName = chip.classList.contains('flag') ? 'tag' : ['key_size', 'key', 'value_size', 'value'].filter(function (c) {
+          return chip.classList.contains(c);
+        })[0];
+        var idx = groups.findIndex(function (g) { return g.name === gName; });
+        chip.style.display = idx === -1 ? 'none' : '';
+        var revealed = state.view === 'encode' || idx < revealedCount;
+        chip.classList.toggle('revealed', idx !== -1 && revealed);
+      });
+
+      // byte strip
+      els.byteStrip.innerHTML = '';
+      var allBytes = [];
+      var cursor = 0;
+      groups.forEach(function (g, gi) {
+        var revealed = gi < revealedCount;
+        g.bytes.forEach(function (b) {
+          allBytes.push(b);
+          var cell = document.createElement('div');
+          cell.className = 'rew-cell grp-' + g.name + (revealed ? '' : ' unrevealed') + (gi === revealedCount - 1 && state.view === 'decode' ? ' current' : '');
+          var hex = document.createElement('span');
+          hex.className = 'hex';
+          hex.textContent = b.toString(16).padStart(2, '0');
+          var ascii = document.createElement('span');
+          ascii.className = 'ascii';
+          ascii.textContent = toAscii(b);
+          cell.appendChild(hex);
+          cell.appendChild(ascii);
+          els.byteStrip.appendChild(cell);
+        });
+        cursor += g.bytes.length;
+      });
+
+      if (state.view === 'encode') {
+        els.summaryLabel.textContent = 'bytes[] =';
+        els.summaryValue.textContent = '[' + allBytes.join(', ') + ']';
+        els.log.innerHTML = encodeLogLines(groups).map(function (l) {
+          return '<div class="line"><span class="m">&raquo;</span>' + l + '</div>';
+        }).join('');
+      } else {
+        var doneKey = revealedCount >= 2;
+        var tagRevealed = revealedCount >= 3;
+        var isDone = revealedCount >= totalSteps;
+        els.summaryLabel.textContent = 'Record =';
+        if (!isDone) {
+          els.summaryValue.textContent = '{ key: ' + (doneKey ? '"' + state.key + '"' : '?') + ', value: ' + (tagRevealed ? (state.tombstone ? 'None' : '?') : '?') + ' }';
+        } else {
+          els.summaryValue.textContent = '{ key: "' + state.key + '", value: ' + (state.tombstone ? 'None' : 'Some("' + state.value + '")') + ' }';
+        }
+        var lines = [];
+        var runningCursor = 0;
+        for (var i = 0; i < revealedCount; i++) {
+          lines.push(decodeLogLine(groups[i], runningCursor));
+          runningCursor += groups[i].bytes.length;
+        }
+        if (revealedCount === 0) {
+          els.log.innerHTML = '<div class="empty">// press Next to start reading bytes from cursor 0&hellip;</div>';
+        } else {
+          var htmlLines = lines.map(function (l) { return '<div class="line"><span class="m">&raquo;</span>' + l + '</div>'; });
+          if (isDone) {
+            htmlLines.push('<div class="line"><span class="m">&raquo;</span>done: Record { key: "' + state.key + '", value: ' + (state.tombstone ? 'None' : 'Some("' + state.value + '")') + ' }</div>');
+          }
+          els.log.innerHTML = htmlLines.join('');
+        }
+        els.stepReadout.textContent = 'cursor = ' + runningCursor + ' / ' + allBytes.length;
+        els.btnPrev.disabled = state.step === 0;
+        els.btnNext.disabled = state.step >= totalSteps;
+        els.btnPlay.textContent = state.playing ? '⏸' : '▶';
+      }
+    }
+
+    function setView(v) {
+      state.view = v;
+      state.step = 0;
+      state.playing = false;
+      render();
+    }
+    function next() {
+      var groups = computeGroups();
+      if (state.step >= groups.length) return;
+      state.step += 1;
+      render();
+    }
+    function prev() {
+      state.playing = false;
+      if (state.step > 0) state.step -= 1;
+      render();
+    }
+    function reset() {
+      state.playing = false;
+      state.step = 0;
+      render();
+    }
+    var playTimer = null;
+    function togglePlay() {
+      if (state.playing) {
+        state.playing = false;
+        if (playTimer) clearTimeout(playTimer);
+        render();
+        return;
+      }
+      var groups = computeGroups();
+      if (state.step >= groups.length) state.step = 0;
+      state.playing = true;
+      render();
+      var tick = function () {
+        if (!state.playing) return;
+        var g = computeGroups();
+        if (state.step >= g.length) {
+          state.playing = false;
+          render();
+          return;
+        }
+        next();
+        playTimer = setTimeout(tick, 1100);
+      };
+      playTimer = setTimeout(tick, 1100);
+    }
+
+    els.viewEncode.addEventListener('click', function () { setView('encode'); });
+    els.viewDecode.addEventListener('click', function () { setView('decode'); });
+    els.keyInput.addEventListener('input', function () {
+      state.key = els.keyInput.value;
+      state.step = 0;
+      render();
+    });
+    els.valueInput.addEventListener('input', function () {
+      state.value = els.valueInput.value;
+      state.step = 0;
+      render();
+    });
+    els.modeValue.addEventListener('click', function () {
+      state.tombstone = false;
+      state.step = 0;
+      els.modeValue.setAttribute('aria-pressed', 'true');
+      els.modeTombstone.setAttribute('aria-pressed', 'false');
+      render();
+    });
+    els.modeTombstone.addEventListener('click', function () {
+      state.tombstone = true;
+      state.step = 0;
+      els.modeValue.setAttribute('aria-pressed', 'false');
+      els.modeTombstone.setAttribute('aria-pressed', 'true');
+      render();
+    });
+    els.btnNext.addEventListener('click', function () { state.playing = false; next(); });
+    els.btnPrev.addEventListener('click', prev);
+    els.btnReset.addEventListener('click', reset);
+    els.btnPlay.addEventListener('click', togglePlay);
+
+    render();
+  })();
+</script>

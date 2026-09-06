@@ -12,6 +12,10 @@ series:
   blurb: "MemTable and naive on-disk persistence"
 ---
 
+import RecordEncoderWidget from "../../components/writing/RecordEncoderWidget.astro";
+import MemtableReplayWidget from "../../components/writing/MemtableReplayWidget.astro";
+import EngineGetWidget from "../../components/writing/EngineGetWidget.astro";
+
 So previously I took inspiration from [this](https://www.nan.fyi/database) and with AI (Gemini mostly) was able to come up with some working KV DB, then Document style, then eventually a passable SQL DB, all built on top of each other. On some level it's the most impressive thing I have done (with the caveat that AI was involved — feel how you feel about it, because I sure have not-too-good feelings about it). So after going around thinking about what to work on next, following a couple of "games," I knew that DBs were way more than what I had done — for one, I wasn't able to use it in even a dummy application. So I went back to Claude and asked it to suggest some new directions to go with it, and it suggested distribution (which would involve replication, partitioning, sharding, etc.) — good stuff. But then I thought, why not do this whole thing in Rust? (I am not a masochist, but yeah, this was a weird decision when my understanding of Rust was, and still is, sparse.) So Rust it was: start the whole thing from the beginning and do what we did before.
 
 So this post is about that rewrite, mostly. Before work began I asked Claude to review the TypeScript code and draft a curriculum, factoring in the way the TS version was built up from a simple file storing KVs (the git history was helpful here). We did, and the past couple of weeks have been about that start.
@@ -123,6 +127,11 @@ pub(crate) fn encode_record(key: Vec<u8>, value: Option<Vec<u8>>) -> Vec<u8> {
     encoded_record
 }
 ```
+### Encode/Decode Live example
+
+You can try it with your own key and value below. The byte strip updates live, color-coded by field, so you can see exactly which bytes come from where. Flip to tombstone mode to see the `value_size`/`value` fields disappear entirely and the tag flip to `0`. Switch to the decode view to run it in reverse: step through the same bytes with a cursor, one field at a time, and watch the record get reconstructed field by field — the mirror image of `decode_record` below.
+
+<RecordEncoderWidget />
 
 ## Decoding a Record
 
@@ -186,6 +195,12 @@ pub(crate) fn replay(buffer: &[u8]) -> MemTable {
 }
 ```
 
+### Memtable Replay Example
+
+Below is what the file actually holds: one flat stream of bytes, no newline or separator anywhere. It starts fully undifferentiated — no colors, no record boundaries, because nothing in the file itself marks where one record ends and the next begins. Step through and watch the cursor carve it up in real time, exactly like `decode_record`: read a record's bytes, land precisely on the next record's `key_size` (never off by one, because the lengths already told it how far to jump), color that stretch in behind it, and feed the decoded result into a fresh MemTable on the right. Notice the file order and the MemTable order never match because that's the `BTreeMap` doing its job, keeping things sorted regardless of what order they were written in.
+
+<MemtableReplayWidget />
+
 ## The Naive Engine
 
 As I have stated above, the engine is naive and for some operations it wraps around the memtable.
@@ -231,6 +246,11 @@ impl Engine {
 }
 
 ```
+### Naive Engine example
+
+As you see in the code `get`'s signature above is `Option<Option<Vec<u8>>>` which is essentially a double `Option` that trips people up the first time they see it. The outer one is "does this key exist at all," the inner one is the tombstone: "if it exists, is there actually a value, or was it deleted." `get` itself is still a `todo!()` stub above so as to not length this post, but here's the logic it needs to implement, worked out against a small MemTable:
+
+<EngineGetWidget />
 
 ## Tests
 

@@ -1,0 +1,373 @@
+<div class="writing-widget">
+  <div class="panel">
+    <div class="prompt-row">
+      <span class="sigil">$</span>
+      <span class="cmd" id="mrw-promptCmd">replay(buffer)</span>
+      <span class="cursor"></span>
+    </div>
+    <div class="stage">
+      <div class="mrw-file-label">the data file &mdash; just bytes. no record markers until the cursor reads far enough to know where one ends.</div>
+      <div class="mrw-stream" id="mrw-stream"></div>
+      <div class="mrw-columns">
+        <div class="mrw-col">
+          <div class="mrw-col-label">replay() decodes each record in turn</div>
+          <div class="mrw-log-mini" id="mrw-log"></div>
+        </div>
+        <div class="mrw-col">
+          <div class="mrw-col-label">MemTable (BTreeMap, always sorted)</div>
+          <div class="mrw-map" id="mrw-map"></div>
+        </div>
+      </div>
+    </div>
+    <div class="playback">
+      <div class="transport">
+        <button type="button" class="tbtn" id="mrw-btnReset" title="Reset">⟲</button>
+        <button type="button" class="tbtn" id="mrw-btnPrev" title="Previous step">⏮</button>
+        <button type="button" class="tbtn primary" id="mrw-btnPlay" title="Play">▶</button>
+        <button type="button" class="tbtn" id="mrw-btnNext" title="Next step">⏭</button>
+      </div>
+      <span class="step-readout" id="mrw-stepReadout">step 0 / 5</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .mrw-file-label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .mrw-stream {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px dashed var(--border);
+  }
+  :global(.mrw-byte) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    padding: 3px 1px;
+    border-radius: 4px;
+    background: var(--bg-well);
+    border: 1px solid var(--border-faint);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  :global(.mrw-byte .hex) {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  :global(.mrw-byte.mrw-boundary) {
+    margin-right: 6px;
+  }
+  :global(.mrw-byte.decoded) {
+    background: color-mix(in srgb, var(--grp-color) 16%, var(--bg-well));
+    border: 1px solid color-mix(in srgb, var(--grp-color) 40%, transparent);
+  }
+  :global(.mrw-byte.decoded .hex) {
+    color: var(--grp-color);
+  }
+  :global(.mrw-byte.grp-key_size) { --grp-color: #f59e0b; }
+  :global(.mrw-byte.grp-key) { --grp-color: #10b981; }
+  :global(.mrw-byte.grp-tag) { --grp-color: #8b5cf6; }
+  :global(.mrw-byte.grp-value_size) { --grp-color: #06b6d4; }
+  :global(.mrw-byte.grp-value) { --grp-color: var(--accent); }
+  :global(.mrw-cursor) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 0 4px;
+    align-self: stretch;
+  }
+  :global(.mrw-cursor .caret) {
+    animation: mrwCaretBlink 1.1s steps(1) infinite;
+  }
+  @keyframes mrwCaretBlink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0.15; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.mrw-cursor .caret) { animation: none; }
+  }
+  .mrw-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .mrw-columns {
+      grid-template-columns: 1fr;
+    }
+  }
+  .mrw-col-label {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .mrw-log-mini {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .mrw-log-mini .empty {
+    font-style: italic;
+    opacity: 0.6;
+  }
+  .mrw-log-mini .m {
+    color: var(--accent);
+    margin-right: 6px;
+  }
+  .mrw-map {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 40px;
+  }
+  :global(.mrw-map-row) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-page);
+    font-size: 13px;
+  }
+  :global(.mrw-map-row .k) {
+    font-weight: 700;
+    color: var(--fg);
+  }
+  :global(.mrw-map-row .v) {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+  :global(.mrw-map-row.tombstone .v) {
+    color: #ef4444;
+    font-style: italic;
+  }
+  :global(.mrw-map-row.flash) {
+    animation: mrwFlash 900ms ease-out;
+  }
+  @keyframes mrwFlash {
+    0% { box-shadow: 0 0 0 3px var(--accent-soft); }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.mrw-map-row.flash) { animation: none; }
+  }
+  .mrw-map .empty {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+    padding: 7px 10px;
+  }
+</style>
+
+<script>
+  (function () {
+    var ops = [
+      { op: 'insert', key: 'mango', value: 'sweet' },
+      { op: 'insert', key: 'apple', value: 'tart' },
+      { op: 'insert', key: 'date', value: 'dry' },
+      { op: 'delete', key: 'mango' },
+      { op: 'insert', key: 'banana', value: 'soft' },
+    ];
+    var enc = new TextEncoder();
+    function packU32(n) {
+      return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
+    }
+    // Mirrors encode_record: same field order and byte layout the post walks through.
+    function encodeOp(o) {
+      var keyBytes = Array.from(enc.encode(o.key));
+      var fields = [
+        { name: 'key_size', bytes: packU32(keyBytes.length) },
+        { name: 'key', bytes: keyBytes },
+      ];
+      if (o.op === 'delete') {
+        fields.push({ name: 'tag', bytes: [0] });
+      } else {
+        var valueBytes = Array.from(enc.encode(o.value));
+        fields.push({ name: 'tag', bytes: [1] });
+        fields.push({ name: 'value_size', bytes: packU32(valueBytes.length) });
+        fields.push({ name: 'value', bytes: valueBytes });
+      }
+      return fields;
+    }
+    var records = ops.map(encodeOp);
+
+    var state = { step: 0, playing: false };
+    var els = {
+      promptCmd: document.getElementById('mrw-promptCmd'),
+      stream: document.getElementById('mrw-stream'),
+      map: document.getElementById('mrw-map'),
+      log: document.getElementById('mrw-log'),
+      btnReset: document.getElementById('mrw-btnReset'),
+      btnPrev: document.getElementById('mrw-btnPrev'),
+      btnNext: document.getElementById('mrw-btnNext'),
+      btnPlay: document.getElementById('mrw-btnPlay'),
+      stepReadout: document.getElementById('mrw-stepReadout'),
+    };
+
+    function totalBytes() {
+      return records.reduce(function (sum, fields) {
+        return sum + fields.reduce(function (s, f) { return s + f.bytes.length; }, 0);
+      }, 0);
+    }
+    // One flat, undifferentiated stream. Bytes belonging to a record already
+    // stepped past get colored by field; everything the cursor hasn't reached
+    // yet stays plain hex — the boundaries aren't known until replay finds them.
+    function renderStream() {
+      els.stream.innerHTML = '';
+      records.forEach(function (fields, i) {
+        if (i === state.step) {
+          var marker = document.createElement('div');
+          marker.className = 'mrw-cursor';
+          marker.innerHTML = '<span class="caret">▼</span>cursor';
+          els.stream.appendChild(marker);
+        }
+        var decoded = i < state.step;
+        fields.forEach(function (f) {
+          f.bytes.forEach(function (b) {
+            var cell = document.createElement('div');
+            cell.className = 'mrw-byte' + (decoded ? ' decoded grp-' + f.name : '');
+            var hex = document.createElement('span');
+            hex.className = 'hex';
+            hex.textContent = b.toString(16).padStart(2, '0');
+            cell.appendChild(hex);
+            els.stream.appendChild(cell);
+          });
+        });
+        if (decoded) {
+          var last = els.stream.lastElementChild;
+          if (last) last.classList.add('mrw-boundary');
+        }
+      });
+    }
+    function computeMap(uptoStep) {
+      var map = {};
+      var lastKey = null;
+      for (var i = 0; i < uptoStep; i++) {
+        var o = ops[i];
+        map[o.key] = o.op === 'delete' ? null : o.value;
+        lastKey = o.key;
+      }
+      return { map: map, lastKey: lastKey };
+    }
+    function renderMap() {
+      var result = computeMap(state.step);
+      var keys = Object.keys(result.map).sort();
+      els.map.innerHTML = '';
+      if (keys.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = '// empty — nothing replayed yet';
+        els.map.appendChild(empty);
+        return;
+      }
+      keys.forEach(function (k) {
+        var v = result.map[k];
+        var row = document.createElement('div');
+        row.className = 'mrw-map-row' + (v === null ? ' tombstone' : '') + (k === result.lastKey ? ' flash' : '');
+        var kEl = document.createElement('span');
+        kEl.className = 'k';
+        kEl.textContent = k;
+        var vEl = document.createElement('span');
+        vEl.className = 'v';
+        vEl.textContent = v === null ? '∅ tombstone' : '"' + v + '"';
+        row.appendChild(kEl);
+        row.appendChild(vEl);
+        els.map.appendChild(row);
+      });
+    }
+    function renderLog() {
+      if (state.step === 0) {
+        els.log.innerHTML = '<div class="empty">// cursor = 0, waiting for first step&hellip;</div>';
+        return;
+      }
+      var lines = [];
+      var cursor = 0;
+      for (var i = 0; i < state.step; i++) {
+        var fields = records[i];
+        var o = ops[i];
+        var recStart = cursor;
+        fields.forEach(function (f) { cursor += f.bytes.length; });
+        var desc = o.op === 'delete'
+          ? 'tag=0 &rarr; tombstone &rarr; insert(b"' + o.key + '", None)'
+          : 'tag=1, value="' + o.value + '" &rarr; insert(b"' + o.key + '", Some(b"' + o.value + '"))';
+        lines.push('<div><span class="m">&raquo;</span>cursor ' + recStart + '..' + cursor + ': key_size, key="' + o.key + '", ' + desc + '</div>');
+      }
+      els.log.innerHTML = lines.join('');
+    }
+    function render() {
+      els.promptCmd.textContent = state.step >= ops.length
+        ? 'replay(buffer) — done, memtable rebuilt'
+        : 'replay(buffer) — step ' + state.step;
+      renderStream();
+      renderMap();
+      renderLog();
+      var cursorPos = records.slice(0, state.step).reduce(function (sum, fields) {
+        return sum + fields.reduce(function (s, f) { return s + f.bytes.length; }, 0);
+      }, 0);
+      els.stepReadout.innerHTML = 'step ' + state.step + ' / ' + ops.length + ' &middot; cursor = ' + cursorPos + ' / ' + totalBytes();
+      els.btnPrev.disabled = state.step === 0;
+      els.btnNext.disabled = state.step === ops.length;
+      els.btnPlay.textContent = state.playing ? '⏸' : '▶';
+    }
+    function next() {
+      if (state.step >= ops.length) return;
+      state.step += 1;
+      render();
+    }
+    function prev() {
+      state.playing = false;
+      if (state.step > 0) state.step -= 1;
+      render();
+    }
+    function reset() {
+      state.playing = false;
+      state.step = 0;
+      render();
+    }
+    var playTimer = null;
+    function togglePlay() {
+      if (state.playing) {
+        state.playing = false;
+        if (playTimer) clearTimeout(playTimer);
+        render();
+        return;
+      }
+      if (state.step >= ops.length) state.step = 0;
+      state.playing = true;
+      render();
+      var tick = function () {
+        if (!state.playing) return;
+        if (state.step >= ops.length) {
+          state.playing = false;
+          render();
+          return;
+        }
+        next();
+        playTimer = setTimeout(tick, 1300);
+      };
+      playTimer = setTimeout(tick, 1300);
+    }
+    els.btnNext.addEventListener('click', function () { state.playing = false; next(); });
+    els.btnPrev.addEventListener('click', prev);
+    els.btnReset.addEventListener('click', reset);
+    els.btnPlay.addEventListener('click', togglePlay);
+    render();
+  })();
+</script>
