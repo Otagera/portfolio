@@ -6,17 +6,19 @@
       <span class="cursor"></span>
     </div>
     <div class="stage">
-      <div class="mrw-file-label">the data file &mdash; just bytes. no record markers until the cursor reads far enough to know where one ends.</div>
-      <div class="mrw-stream" id="mrw-stream"></div>
-      <div class="mrw-columns">
-        <div class="mrw-col">
-          <div class="mrw-col-label">replay() decodes each record in turn</div>
-          <div class="mrw-log-mini" id="mrw-log"></div>
+      <div class="mrw-top">
+        <div class="mrw-stream-col">
+          <div class="mrw-file-label">the data file &mdash; just bytes. no record markers until the cursor reads far enough to know where one ends.</div>
+          <div class="mrw-stream" id="mrw-stream"></div>
         </div>
-        <div class="mrw-col">
+        <div class="mrw-map-col">
           <div class="mrw-col-label">MemTable (BTreeMap, always sorted)</div>
           <div class="mrw-map" id="mrw-map"></div>
         </div>
+      </div>
+      <div class="mrw-log-section">
+        <div class="mrw-col-label">replay() decodes each record in turn</div>
+        <div class="mrw-log-mini" id="mrw-log"></div>
       </div>
     </div>
     <div class="playback">
@@ -32,6 +34,26 @@
 </div>
 
 <style>
+  .mrw-top {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 20px;
+    align-items: start;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+  @media (max-width: 640px) {
+    .mrw-top {
+      grid-template-columns: 1fr;
+    }
+  }
+  .mrw-stream-col,
+  .mrw-map-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
   .mrw-file-label {
     font-size: 10px;
     letter-spacing: 0.04em;
@@ -43,9 +65,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 2px;
-    padding-bottom: 12px;
-    margin-bottom: 14px;
-    border-bottom: 1px dashed var(--border);
   }
   :global(.mrw-byte) {
     display: flex;
@@ -100,15 +119,9 @@
   @media (prefers-reduced-motion: reduce) {
     :global(.mrw-cursor .caret) { animation: none; }
   }
-  .mrw-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  @media (max-width: 640px) {
-    .mrw-columns {
-      grid-template-columns: 1fr;
-    }
+  .mrw-log-section {
+    display: flex;
+    flex-direction: column;
   }
   .mrw-col-label {
     font-size: 10px;
@@ -122,11 +135,11 @@
     color: var(--muted);
     line-height: 1.8;
   }
-  .mrw-log-mini .empty {
+  :global(.mrw-log-mini .empty) {
     font-style: italic;
     opacity: 0.6;
   }
-  .mrw-log-mini .m {
+  :global(.mrw-log-mini .m) {
     color: var(--accent);
     margin-right: 6px;
   }
@@ -150,13 +163,28 @@
     font-weight: 700;
     color: var(--fg);
   }
+  :global(.mrw-map-row .v-wrap) {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
   :global(.mrw-map-row .v) {
     font-variant-numeric: tabular-nums;
     color: var(--accent);
   }
-  :global(.mrw-map-row.tombstone .v) {
+  :global(.mrw-map-row .v.tombstone) {
     color: #ef4444;
     font-style: italic;
+  }
+  :global(.mrw-map-row .v-prev) {
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+  :global(.mrw-map-row .v-arrow) {
+    color: var(--muted);
+    font-size: 11px;
   }
   :global(.mrw-map-row.flash) {
     animation: mrwFlash 900ms ease-out;
@@ -168,7 +196,7 @@
   @media (prefers-reduced-motion: reduce) {
     :global(.mrw-map-row.flash) { animation: none; }
   }
-  .mrw-map .empty {
+  :global(.mrw-map .empty) {
     font-size: 12px;
     color: var(--muted);
     font-style: italic;
@@ -259,12 +287,16 @@
     function computeMap(uptoStep) {
       var map = {};
       var lastKey = null;
+      var priorForLast; // value lastKey held right before the final op, or undefined if this was its first appearance
       for (var i = 0; i < uptoStep; i++) {
         var o = ops[i];
+        if (i === uptoStep - 1) {
+          priorForLast = Object.prototype.hasOwnProperty.call(map, o.key) ? map[o.key] : undefined;
+        }
         map[o.key] = o.op === 'delete' ? null : o.value;
         lastKey = o.key;
       }
-      return { map: map, lastKey: lastKey };
+      return { map: map, lastKey: lastKey, priorForLast: priorForLast };
     }
     function renderMap() {
       var result = computeMap(state.step);
@@ -284,11 +316,23 @@
         var kEl = document.createElement('span');
         kEl.className = 'k';
         kEl.textContent = k;
-        var vEl = document.createElement('span');
-        vEl.className = 'v';
-        vEl.textContent = v === null ? '∅ tombstone' : '"' + v + '"';
+        var vWrap = document.createElement('span');
+        vWrap.className = 'v-wrap';
+        var display = function (val) { return val === null ? '∅ tombstone' : '"' + val + '"'; };
+        var isOverwrite = k === result.lastKey && result.priorForLast !== undefined && result.priorForLast !== v;
+        if (isOverwrite) {
+          vWrap.innerHTML =
+            '<span class="v-prev">' + display(result.priorForLast) + '</span>' +
+            '<span class="v-arrow">&rarr;</span>' +
+            '<span class="v' + (v === null ? ' tombstone' : '') + '">' + display(v) + '</span>';
+        } else {
+          var vEl = document.createElement('span');
+          vEl.className = 'v' + (v === null ? ' tombstone' : '');
+          vEl.textContent = display(v);
+          vWrap.appendChild(vEl);
+        }
         row.appendChild(kEl);
-        row.appendChild(vEl);
+        row.appendChild(vWrap);
         els.map.appendChild(row);
       });
     }
