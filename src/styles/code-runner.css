@@ -1,0 +1,150 @@
+/* Chrome for <CodeRunner>, the opt-in Run button on a code block.
+   Distinct from writing-widgets.css: those are hand-built explanatory widgets
+   with the light terminal-panel look, this is a bar welded onto a Shiki block.
+
+   Shiki renders with github-dark in both site themes, so the block is dark on a
+   light page. The runner therefore takes its colours from the code block, not
+   from the page — no .dark variants here, deliberately. */
+
+:root {
+	--cr-bg: #24292e; /* github-dark editor background */
+	--cr-bg-raised: #2f363d;
+	--cr-border: #444c56;
+	--cr-fg: #d1d5da;
+	--cr-muted: #8b949e;
+	--cr-ok: #56d364;
+	--cr-err: #ff7b72;
+}
+
+/* Weld the block to the bar below it. :has() keeps this scoped to blocks that
+   actually have a runner — every other fence on the site is untouched. */
+.prose pre:has(+ codapi-snippet) {
+	margin-bottom: 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+codapi-snippet {
+	display: block;
+	margin: 0 0 1.7rem;
+	background: var(--cr-bg);
+	border: 1px solid var(--cr-border);
+	border-top: 1px solid var(--cr-border);
+	border-bottom-left-radius: 0.375rem;
+	border-bottom-right-radius: 0.375rem;
+	font-family: "JetBrains Mono", "IBM Plex Mono", monospace;
+	font-size: 0.8125rem;
+	color: var(--cr-fg);
+}
+
+/* The editable block gets a visible focus affordance, otherwise readers don't
+   discover that the code is editable at all. */
+.prose pre:has(+ codapi-snippet) code[contenteditable]:focus {
+	outline: none;
+}
+.prose pre:has(+ codapi-snippet):focus-within {
+	box-shadow: inset 0 0 0 1px var(--cr-border);
+}
+
+codapi-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem 0.875rem;
+}
+
+codapi-toolbar button {
+	appearance: none;
+	cursor: pointer;
+	padding: 0.25rem 0.85rem;
+	background: var(--cr-bg-raised);
+	border: 1px solid var(--cr-border);
+	border-radius: 0.25rem;
+	color: var(--cr-fg);
+	font: inherit;
+	line-height: 1.6;
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease;
+}
+
+codapi-toolbar button:hover:not([disabled]) {
+	background: #3a424a;
+	border-color: #5a626b;
+}
+
+codapi-toolbar button[disabled] {
+	cursor: progress;
+	opacity: 0.55;
+}
+
+/* Action links ("Edit", and whatever a sandbox's `actions` adds). */
+codapi-toolbar a {
+	color: var(--cr-muted);
+	text-decoration: none;
+	border-bottom: 1px dotted var(--cr-muted);
+	font-size: 0.75rem;
+}
+
+codapi-toolbar a:hover {
+	color: var(--cr-fg);
+}
+
+codapi-status {
+	color: var(--cr-muted);
+	font-size: 0.75rem;
+}
+
+codapi-status a {
+	color: var(--cr-muted);
+}
+
+codapi-output {
+	display: block;
+	border-top: 1px dashed var(--cr-border);
+	padding: 0.25rem 0.875rem 0.5rem;
+}
+
+/* codapi hides the output by setting [hidden]; the display:block above would
+   otherwise beat the UA stylesheet and leave an empty bordered strip. */
+codapi-output[hidden] {
+	display: none;
+}
+
+/* Output is a <pre><code> inside .prose, so it arrives carrying prose's code
+   styling — flatten it back to a plain result panel. */
+codapi-output pre {
+	margin: 0;
+	padding: 0.5rem 0;
+	background: transparent;
+	border-radius: 0;
+	font-size: 0.8125rem;
+	line-height: 1.6;
+	overflow-x: auto;
+}
+
+codapi-output pre code {
+	background: transparent;
+	padding: 0;
+	font-size: inherit;
+	color: var(--cr-fg);
+}
+
+codapi-output pre code::before,
+codapi-output pre code::after {
+	content: none;
+}
+
+codapi-output a[href="#close"] {
+	float: right;
+	color: var(--cr-muted);
+	text-decoration: none;
+	font-size: 0.75rem;
+	padding-left: 0.75rem;
+}
+
+/* Templates and hidden files live in the DOM as text/plain scripts. Browsers
+   don't render them, but be explicit — MDX puts them in the prose flow. */
+script[type="text/plain"] {
+	display: none;
+}

@@ -11,6 +11,7 @@ spinoffOf:
 ---
 
 import ByteShiftWidget from "../../components/writing/ByteShiftWidget.astro";
+import CodeRunner from "../../components/writing/CodeRunner.astro";
 
 Picture a suitcase with a fixed size limit, and you need to get a bunch of stuff across to another side, say into a file, across a network, wherever. Until I decided to work with binary files, I had never thought about this:
 The thing is a file or a socket doesn't know what a `u32` is. At that layer it's just raw bytes, 0–255 each, and there's no "write the number as it is" button.
@@ -174,7 +175,21 @@ pub(crate) fn byte_packing(value: u32) -> [u8; 4] {
 }
 ```
 
+<CodeRunner
+  sandbox="rust"
+  template={`##CODE##
+
+fn main() {
+    for v in [8u32, 150, 300, 70_000] {
+        println!("{v:>6} -> {:?}", byte_packing(v));
+    }
+}
+`}
+/>
+
 That's the whole thing: shift the value right by 0, 8, 16, and 24 bits, truncate each result down to a `u8`, and you've packed a `u32` into four bytes, most significant first.
+
+Try flipping `(8 * (3 - i))` to `(8 * i)` and running it again — that one character is the difference between big-endian and little-endian, and `300` goes from `[0, 0, 1, 44]` to `[44, 1, 0, 0]`.
 
 ## Decoding It Back
 
@@ -200,6 +215,27 @@ pub(crate) fn decode_packed_byte(bytes: [u8; 4]) -> u32 {
     value
 }
 ```
+
+<CodeRunner
+  sandbox="rust"
+  template={`fn byte_packing(value: u32) -> [u8; 4] {
+    let mut bytes = [0u8; 4];
+    for i in 0..4 {
+        bytes[i] = (value >> (8 * (3 - i))) as u8;
+    }
+    bytes
+}
+
+##CODE##
+
+fn main() {
+    for v in [8u32, 150, 300, 70_000] {
+        let packed = byte_packing(v);
+        println!("{v:>6} -> {packed:?} -> {}", decode_packed_byte(packed));
+    }
+}
+`}
+/>
 
 The cast to `u32` before shifting matters because a `u8` only has 8 bit-positions to begin with so shifting it left just pushes bits off the top and they're lost. Casting up to `u32` first gives the bits 32 positions to land in, so nothing gets discarded when a byte moves up to position 24.
 

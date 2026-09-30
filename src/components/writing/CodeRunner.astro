@@ -1,0 +1,95 @@
+---
+/**
+ * Opt-in Run button for a single code block, backed by codapi (https://codapi.org).
+ *
+ * MUST be placed immediately after the fence it belongs to. codapi resolves the
+ * code it runs via `previousElementSibling`, so nothing may sit between the
+ * generated <pre> and this component — not a paragraph, not a blank-line-
+ * separated HTML comment.
+ *
+ * Runnable is opt-in per block by design: yaml/bash/dockerfile/nginx fences stay
+ * static, and only blocks where running teaches something get a button.
+ *
+ * Hiding context: `template` holds a full compiling program with `##CODE##`
+ * marking where the visible snippet is spliced in. The reader sees only the
+ * interesting lines; rustc gets the whole thing. Pass it inline (kept next to
+ * the prose it belongs to) or point `templateSrc` at a URL or an existing #id.
+ */
+interface Props {
+	/** codapi sandbox name — 'rust', 'javascript', 'sqlite', 'typescript', … */
+	sandbox: string;
+	/** Needed only when another block targets this one via `dependsOn`. */
+	id?: string;
+	/** 'basic' makes the block editable; 'off' leaves it read-only. */
+	editor?: 'basic' | 'off';
+	/** Sandbox command, when it exposes more than the default `run`. */
+	command?: string;
+	/** Hidden wrapper program; `##CODE##` marks the injection point. */
+	template?: string;
+	/** Alternative to `template`: a URL ('/codapi/x.rs') or an '#element-id'. */
+	templateSrc?: string;
+	/** Hidden extra files, space-separated: 'helper.rs' or '#helper.rs'. */
+	files?: string;
+	/** id of a snippet to run first — chains cells (schema → seed → query). */
+	dependsOn?: string;
+	/** 'browser' runs client-side with no server call (javascript/fetch only). */
+	engine?: string;
+	/** 'html' | 'svg' | 'dom' for snippets whose output isn't plain text. */
+	outputMode?: string;
+	/** Self-hosted codapi server, if we ever outgrow the public one. */
+	url?: string;
+}
+
+const {
+	sandbox,
+	id,
+	editor = 'basic',
+	command,
+	template,
+	templateSrc,
+	files,
+	dependsOn,
+	engine,
+	outputMode,
+	url,
+} = Astro.props;
+
+if (template && templateSrc) {
+	throw new Error('CodeRunner: pass either `template` or `templateSrc`, not both.');
+}
+if (template && !template.includes('##CODE##')) {
+	throw new Error('CodeRunner: `template` must contain ##CODE## marking where the snippet goes.');
+}
+
+/* Content-derived id so two runners on a page never collide, and so the id
+   stays stable across builds (a counter would shift when a block is added). */
+const templateId = template
+	? `codapi-tpl-${[...template].reduce((h, c) => (h * 33 + c.charCodeAt(0)) >>> 0, 5381).toString(36)}`
+	: undefined;
+const templateRef = templateSrc ?? (templateId ? `#${templateId}` : undefined);
+---
+
+<codapi-snippet
+	sandbox={sandbox}
+	id={id}
+	editor={editor}
+	command={command}
+	template={templateRef}
+	files={files}
+	depends-on={dependsOn}
+	engine={engine}
+	output-mode={outputMode}
+	url={url}></codapi-snippet
+>{
+	/* Rendered *after* the snippet on purpose: putting it before would make this
+	   script the snippet's previousElementSibling and codapi would try to run the
+	   template instead of the code block. */
+	template && (
+		<script type="text/plain" id={templateId} is:inline set:html={template} />
+	)
+}
+
+<script>
+	/* Hoisted and deduped by Astro, so N runners on a page load one bundle. */
+	import '@antonz/codapi/dist/snippet.mjs';
+</script>
