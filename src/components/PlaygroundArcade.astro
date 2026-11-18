@@ -1,0 +1,622 @@
+---
+interface PlaygroundProject {
+	title: string;
+	desc: string;
+	tech: string[];
+	link?: string;
+	live?: string;
+	year: string;
+}
+
+interface Props {
+	projects: PlaygroundProject[];
+}
+
+const { projects } = Astro.props;
+---
+
+<div class="arcade" data-arcade>
+  <div class="arcade-bar">
+    <span><span class="sigil">$</span> ./playground --arcade</span>
+    <span class="arcade-hint" aria-hidden="true">←/→ move · space fire · esc pause</span>
+  </div>
+
+  <div class="arcade-screen" tabindex="0" aria-label="Playground arcade. Press Enter to start; shoot a project to open it. The same projects are listed below the game." data-screen>
+    <canvas data-canvas aria-hidden="true"></canvas>
+    <div class="arcade-scanlines" aria-hidden="true"></div>
+
+    <div class="arcade-card" data-card hidden role="dialog" aria-modal="false" aria-labelledby="arcade-card-title">
+      <div class="arcade-card-head">
+        <span class="sigil">&gt;</span> open <span data-card-file></span>
+      </div>
+      <h3 id="arcade-card-title" data-card-title></h3>
+      <p data-card-desc></p>
+      <div class="arcade-links">
+        <a data-card-play target="_blank" rel="noopener">Play it &rarr;</a>
+        <a data-card-gh target="_blank" rel="noopener">GitHub &rarr;</a>
+        <button type="button" data-card-close>Back to the game [esc]</button>
+      </div>
+      <div class="arcade-tech" data-card-tech></div>
+    </div>
+  </div>
+
+  <div class="arcade-touch" aria-hidden="true">
+    <button type="button" data-touch="left">◀</button>
+    <button type="button" data-touch="fire">fire</button>
+    <button type="button" data-touch="right">▶</button>
+  </div>
+
+  <script is:inline type="application/json" data-arcade-projects set:html={JSON.stringify(projects)} />
+</div>
+
+<style>
+  .arcade {
+    --arcade-bg: #070b0a;
+    --arcade-fg: #d1fae5;
+    --arcade-accent: #2dd4bf;
+    --arcade-dim: #4b5563;
+    border: 1px solid var(--grid-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--arcade-bg);
+  }
+  .arcade-bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    border-bottom: 1px solid #1f2937;
+  }
+  .sigil { color: var(--arcade-accent); }
+  .arcade-hint { white-space: nowrap; }
+  @media (max-width: 640px) { .arcade-hint { display: none; } }
+
+  .arcade-screen {
+    position: relative;
+    outline: none;
+    cursor: crosshair;
+  }
+  .arcade-screen:focus-visible { box-shadow: inset 0 0 0 2px var(--arcade-accent); }
+  canvas { display: block; width: 100%; }
+  .arcade-scanlines {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.03) 0 1px, transparent 1px 3px);
+  }
+
+  .arcade-card {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    width: min(92%, 30rem);
+    max-height: 92%;
+    overflow: auto;
+    padding: 1rem 1.25rem;
+    background: #0b1211;
+    border: 1px solid var(--arcade-accent);
+    border-radius: 0.375rem;
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12), 0 0 40px rgba(45, 212, 191, 0.15);
+    color: var(--arcade-fg);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+  .arcade-card[hidden] { display: none; }
+  .arcade-card-head { color: #9ca3af; font-size: 0.75rem; }
+  .arcade-card h3 {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--arcade-accent);
+  }
+  .arcade-card p { margin: 0 0 0.75rem; color: #d1d5db; }
+  .arcade-tech { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-top: 0.875rem; }
+  /* Chips are created at runtime, so they don't carry Astro's scoped attribute. */
+  .arcade-tech :global(span) {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    border: 1px solid #1f2937;
+    border-radius: 0.25rem;
+    padding: 0.125rem 0.375rem;
+  }
+  .arcade-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; }
+  .arcade-links a, .arcade-links button {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--arcade-accent);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .arcade-links button { color: #9ca3af; }
+  .arcade-links a:hover, .arcade-links button:hover { text-decoration: underline; }
+
+  .arcade-touch {
+    display: none;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-top: 1px solid #1f2937;
+  }
+  .arcade-touch button {
+    flex: 1;
+    padding: 0.75rem 0;
+    color: var(--arcade-accent);
+    background: #0b1211;
+    border: 1px solid #1f2937;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .arcade-touch button:active { background: #12201e; }
+  @media (pointer: coarse) { .arcade-touch { display: flex; } }
+</style>
+
+<script>
+  interface Project {
+    title: string;
+    desc: string;
+    tech: string[];
+    link?: string;
+    live?: string;
+    year: string;
+  }
+
+  type Mode = 'attract' | 'playing' | 'card' | 'paused' | 'over';
+
+  interface Target {
+    kind: 'project' | 'bug';
+    label: string;
+    // Position relative to the formation origin.
+    rx: number;
+    ry: number;
+    w: number;
+    h: number;
+    alive: boolean;
+    row: number;
+    project?: Project;
+    visited?: boolean;
+    flash?: number;
+  }
+
+  interface Shot { x: number; y: number; vy: number }
+  interface Spark { x: number; y: number; vx: number; vy: number; life: number; ch: string }
+
+  const BUG_TOKENS = ['{}', 'NaN', 'null', ';;', '404', '!=', 'TODO', '0x0', 'undef', '==='];
+  const COLORS = {
+    bg: '#070b0a',
+    fg: '#d1fae5',
+    accent: '#2dd4bf',
+    dim: '#4b5563',
+    warn: '#fbbf24',
+    hit: '#f87171',
+  };
+  const HISCORE_KEY = 'playground-arcade-hiscore';
+
+  function readHiscore(): number {
+    try { return Number(localStorage.getItem(HISCORE_KEY)) || 0; } catch { return 0; }
+  }
+  function writeHiscore(n: number) {
+    try { localStorage.setItem(HISCORE_KEY, String(n)); } catch { /* storage unavailable */ }
+  }
+
+  function initArcade(root: HTMLElement) {
+    const screen = root.querySelector<HTMLElement>('[data-screen]')!;
+    const canvas = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+    const ctx = canvas.getContext('2d')!;
+    const card = root.querySelector<HTMLElement>('[data-card]')!;
+    const projects: Project[] = JSON.parse(root.querySelector('[data-arcade-projects]')!.textContent || '[]');
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let W = 0;
+    let H = 0;
+    let fs = 14; // font size
+    let cw = 8.4; // char width
+    let mode: Mode = 'attract';
+    let targets: Target[] = [];
+    let form = { x: 0, y: 0, dir: 1, speed: 30 };
+    let player = { x: 0, w: 0, cooldown: 0, hurt: 0 };
+    let shots: Shot[] = [];
+    let drops: Shot[] = [];
+    let sparks: Spark[] = [];
+    let score = 0;
+    let hiscore = readHiscore();
+    let lives = 3;
+    let wave = 1;
+    let banner = { text: '', t: 0 };
+    const keys = { left: false, right: false, fire: false };
+    let last = 0;
+    let raf = 0;
+    let visible = true;
+
+    const font = (size = fs, weight = 400) => `${weight} ${size}px "JetBrains Mono", "IBM Plex Mono", monospace`;
+
+    function resize() {
+      const rect = screen.getBoundingClientRect();
+      W = Math.max(280, Math.floor(rect.width));
+      fs = W < 420 ? 10 : W < 600 ? 12 : 14;
+      H = Math.round(Math.min(460, Math.max(320, W * 0.62)));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      canvas.style.height = `${H}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.font = font();
+      cw = ctx.measureText('M').width;
+      player.w = cw * 3;
+      player.x = Math.min(Math.max(player.x || W / 2, player.w), W - player.w);
+      if (mode === 'attract' || targets.length === 0) layout();
+      draw();
+    }
+
+    function layout() {
+      // Top row: one box per project. Below: rows of bugs.
+      const pad = fs * 0.6;
+      const boxH = fs * 2.4;
+      const boxes: Target[] = projects.map((p): Target => {
+        const label = p.title.toUpperCase();
+        return {
+          kind: 'project', label, rx: 0, ry: 0,
+          w: cw * label.length + pad * 2, h: boxH,
+          alive: true, row: 0, project: p, visited: targets.find((t) => t.project === p)?.visited ?? false,
+        };
+      });
+      const gap = cw * 2;
+      let rowW = boxes.reduce((s, b) => s + b.w, 0) + gap * (boxes.length - 1);
+      // On narrow screens, stack the boxes into two rows rather than overflow.
+      const maxRow = W * 0.82;
+      let row: Target[] = [];
+      const rows: Target[][] = [row];
+      let cur = 0;
+      for (const b of boxes) {
+        if (cur > 0 && cur + gap + b.w > maxRow) { row = []; rows.push(row); cur = 0; }
+        row.push(b);
+        cur += (cur > 0 ? gap : 0) + b.w;
+      }
+      rowW = Math.max(...rows.map((r) => r.reduce((s, b) => s + b.w, 0) + gap * (r.length - 1)));
+      let y = 0;
+      rows.forEach((r, ri) => {
+        const w = r.reduce((s, b) => s + b.w, 0) + gap * (r.length - 1);
+        let x = (rowW - w) / 2;
+        for (const b of r) { b.rx = x; b.ry = y; b.row = ri; x += b.w + gap; }
+        y += boxH + fs;
+      });
+
+      const bugW = cw * 5;
+      const cols = Math.max(4, Math.min(8, Math.floor(rowW / (bugW + cw))));
+      const bugRows = W < 420 ? 2 : 3;
+      const bugs: Target[] = [];
+      const gridW = cols * bugW + (cols - 1) * cw;
+      const x0 = (rowW - gridW) / 2;
+      y += fs * 0.6;
+      for (let r = 0; r < bugRows; r++) {
+        for (let c = 0; c < cols; c++) {
+          bugs.push({
+            kind: 'bug',
+            label: BUG_TOKENS[(r * cols + c + wave) % BUG_TOKENS.length] ?? '{}',
+            rx: x0 + c * (bugW + cw), ry: y + r * fs * 2,
+            w: bugW, h: fs * 1.4, alive: true, row: r,
+          });
+        }
+      }
+      targets = [...boxes, ...bugs];
+      form = { x: (W - rowW) / 2, y: fs * 3, dir: 1, speed: (W * 0.05) + wave * 8 };
+    }
+
+    function start() {
+      score = 0; lives = 3; wave = 1;
+      for (const t of targets) t.visited = false;
+      shots = []; drops = []; sparks = [];
+      layout();
+      mode = 'playing';
+      banner = { text: 'WAVE 1', t: 1.5 };
+      screen.focus({ preventScroll: true });
+    }
+
+    function nextWave() {
+      wave += 1;
+      shots = []; drops = [];
+      layout();
+      banner = { text: `WAVE ${wave}`, t: 1.5 };
+    }
+
+    function burst(x: number, y: number, color: boolean) {
+      if (reduceMotion) return;
+      const chars = color ? ['*', '+', '·'] : ['.', '·'];
+      for (let i = 0; i < 10; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = 40 + Math.random() * 90;
+        sparks.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.3, ch: chars[i % chars.length] ?? '.' });
+      }
+    }
+
+    function openCard(t: Target) {
+      const p = t.project!;
+      if (!t.visited) { score += 50; t.visited = true; }
+      mode = 'card';
+      card.querySelector('[data-card-file]')!.textContent = `${p.title.toLowerCase().replace(/\s+/g, '-')}/README`;
+      card.querySelector('[data-card-title]')!.textContent = `${p.title} · ${p.year}`;
+      card.querySelector('[data-card-desc]')!.textContent = p.desc;
+      const tech = card.querySelector('[data-card-tech]')!;
+      tech.replaceChildren(...p.tech.map((x) => { const s = document.createElement('span'); s.textContent = x; return s; }));
+      const play = card.querySelector<HTMLAnchorElement>('[data-card-play]')!;
+      if (p.live) { play.href = p.live; play.hidden = false; } else { play.hidden = true; }
+      const gh = card.querySelector<HTMLAnchorElement>('[data-card-gh]')!;
+      if (p.link) { gh.href = p.link; gh.hidden = false; } else { gh.hidden = true; }
+      card.hidden = false;
+      card.querySelector<HTMLButtonElement>('[data-card-close]')!.focus({ preventScroll: true });
+    }
+
+    function closeCard() {
+      card.hidden = true;
+      mode = 'playing';
+      keys.fire = false;
+      screen.focus({ preventScroll: true });
+    }
+
+    function gameOver() {
+      mode = 'over';
+      if (score > hiscore) { hiscore = score; writeHiscore(hiscore); }
+    }
+
+    function update(dt: number) {
+      if (banner.t > 0) banner.t -= dt;
+      for (const s of sparks) { s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt; }
+      sparks = sparks.filter((s) => s.life > 0);
+      for (const t of targets) if (t.flash) t.flash = Math.max(0, t.flash - dt);
+      if (mode !== 'playing') return;
+
+      // Player
+      const pspeed = W * 0.55;
+      if (keys.left) player.x -= pspeed * dt;
+      if (keys.right) player.x += pspeed * dt;
+      player.x = Math.min(Math.max(player.x, player.w / 2 + 4), W - player.w / 2 - 4);
+      player.cooldown -= dt;
+      if (player.hurt > 0) player.hurt -= dt;
+      if (keys.fire && player.cooldown <= 0 && shots.length < 2) {
+        shots.push({ x: player.x, y: H - fs * 2.6, vy: -H * 1.1 });
+        player.cooldown = 0.32;
+      }
+
+      // Formation
+      const alive = targets.filter((t) => t.alive);
+      const bugsLeft = alive.filter((t) => t.kind === 'bug').length;
+      const totalBugs = targets.filter((t) => t.kind === 'bug').length || 1;
+      const speed = form.speed * (1 + (1 - bugsLeft / totalBugs) * 1.6);
+      form.x += form.dir * speed * dt;
+      const minX = Math.min(...alive.map((t) => form.x + t.rx));
+      const maxX = Math.max(...alive.map((t) => form.x + t.rx + t.w));
+      if ((form.dir > 0 && maxX > W - 8) || (form.dir < 0 && minX < 8)) {
+        form.dir *= -1;
+        form.x += form.dir * 2;
+        form.y += fs * 0.9;
+      }
+      const bottom = Math.max(...alive.map((t) => form.y + t.ry + t.h));
+      if (bottom > H - fs * 3.4) { lives = 0; gameOver(); return; }
+
+      // Bugs return fire.
+      const fireRate = 0.6 + wave * 0.25;
+      if (bugsLeft && Math.random() < fireRate * dt) {
+        const shooters = alive.filter((t) => t.kind === 'bug');
+        const s = shooters[Math.floor(Math.random() * shooters.length)];
+        if (s) drops.push({ x: form.x + s.rx + s.w / 2, y: form.y + s.ry + s.h, vy: H * 0.38 });
+      }
+
+      // Move shots, resolve hits.
+      for (const s of shots) s.y += s.vy * dt;
+      for (const d of drops) d.y += d.vy * dt;
+      shots = shots.filter((s) => {
+        if (s.y < 0) return false;
+        for (const t of targets) {
+          if (!t.alive) continue;
+          const x = form.x + t.rx;
+          const y = form.y + t.ry;
+          if (s.x >= x && s.x <= x + t.w && s.y >= y && s.y <= y + t.h) {
+            if (t.kind === 'bug') {
+              t.alive = false;
+              score += 10 * (3 - Math.min(t.row, 2));
+              burst(x + t.w / 2, y + t.h / 2, false);
+            } else {
+              t.flash = 0.4;
+              burst(x + t.w / 2, y + t.h / 2, true);
+              openCard(t);
+            }
+            return false;
+          }
+        }
+        return true;
+      });
+      const py = H - fs * 2;
+      drops = drops.filter((d) => {
+        if (d.y > H) return false;
+        if (player.hurt <= 0 && Math.abs(d.x - player.x) < player.w / 2 && d.y >= py - fs * 0.6 && d.y <= py + fs * 0.4) {
+          lives -= 1;
+          player.hurt = 1.2;
+          burst(player.x, py, true);
+          if (lives <= 0) gameOver();
+          return false;
+        }
+        return true;
+      });
+
+      if (bugsLeft === 0 && mode === 'playing') nextWave();
+    }
+
+    function text(s: string, x: number, y: number, color: string, align: CanvasTextAlign = 'left', size = fs, weight = 400) {
+      ctx.font = font(size, weight);
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s, x, y);
+    }
+
+    function drawBox(t: Target, x: number, y: number) {
+      const lit = (t.flash ?? 0) > 0;
+      ctx.strokeStyle = lit ? COLORS.warn : t.visited ? COLORS.dim : COLORS.accent;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(t.w), Math.round(t.h));
+      // Corner ticks give it a terminal-window feel.
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.fillRect(Math.round(x), Math.round(y), 3, 3);
+      ctx.fillRect(Math.round(x + t.w) - 2, Math.round(y), 3, 3);
+      text(t.label, x + t.w / 2, y + t.h / 2, lit ? COLORS.warn : t.visited ? COLORS.dim : COLORS.fg, 'center', fs, 700);
+      if (t.visited) text('✓', x + t.w - fs * 0.5, y + fs * 0.55, COLORS.accent, 'center', fs * 0.75);
+    }
+
+    function draw() {
+      ctx.fillStyle = COLORS.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      // HUD
+      const hudY = fs * 1.2;
+      text(`SCORE ${String(score).padStart(5, '0')}`, 12, hudY, COLORS.fg);
+      text(`HI ${String(hiscore).padStart(5, '0')}`, W / 2, hudY, COLORS.dim, 'center');
+      text(`${'$ '.repeat(Math.max(lives, 0)).trim() || '-'}`, W - 12, hudY, COLORS.accent, 'right');
+
+      // Ground line
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(0, H - fs * 0.9, W, 1);
+
+      if (mode === 'attract') {
+        const t = performance.now() / 1000;
+        text('PLAYGROUND', W / 2, H * 0.3, COLORS.accent, 'center', fs * 2.4, 700);
+        text('games and experiments, behind a little game', W / 2, H * 0.3 + fs * 2.6, COLORS.dim, 'center');
+        text('shoot the bugs · shoot a project to open it', W / 2, H * 0.55, COLORS.fg, 'center');
+        if (reduceMotion || Math.floor(t * 2) % 2 === 0) {
+          text('[ press ENTER or tap to start ]', W / 2, H * 0.7, COLORS.accent, 'center', fs, 700);
+        }
+        text('<$>', W / 2, H - fs * 2, COLORS.accent, 'center', fs, 700);
+        return;
+      }
+
+      for (const t of targets) {
+        if (!t.alive) continue;
+        const x = form.x + t.rx;
+        const y = form.y + t.ry;
+        if (t.kind === 'project') drawBox(t, x, y);
+        else text(t.label, x + t.w / 2, y + t.h / 2, COLORS.hit, 'center', fs, 700);
+      }
+
+      for (const s of shots) {
+        ctx.fillStyle = COLORS.accent;
+        ctx.fillRect(Math.round(s.x) - 1, Math.round(s.y), 2, fs * 0.8);
+      }
+      for (const d of drops) text('*', d.x, d.y, COLORS.warn, 'center', fs, 700);
+      for (const s of sparks) text(s.ch, s.x, s.y, COLORS.warn, 'center', fs * 0.9);
+
+      const blink = player.hurt > 0 && Math.floor(player.hurt * 10) % 2 === 0;
+      if (!blink) text('<$>', player.x, H - fs * 2, COLORS.accent, 'center', fs, 700);
+
+      if (banner.t > 0 && mode === 'playing') text(banner.text, W / 2, H * 0.62, COLORS.fg, 'center', fs * 1.4, 700);
+      if (mode === 'paused') overlay('PAUSED', 'press ESC or tap to resume');
+      if (mode === 'over') overlay(lives <= 0 ? 'SEGFAULT' : 'GAME OVER', `score ${score} · press ENTER or tap to retry`);
+    }
+
+    function overlay(title: string, sub: string) {
+      ctx.fillStyle = 'rgba(7, 11, 10, 0.78)';
+      ctx.fillRect(0, 0, W, H);
+      text(title, W / 2, H * 0.42, COLORS.accent, 'center', fs * 2, 700);
+      text(sub, W / 2, H * 0.42 + fs * 2.4, COLORS.fg, 'center');
+    }
+
+    function frame(now: number) {
+      const dt = Math.min(0.05, (now - last) / 1000 || 0);
+      last = now;
+      update(dt);
+      draw();
+      // Idle screens don't need 60fps; only keep animating while something moves.
+      const busy = mode === 'playing' || sparks.length > 0 || mode === 'attract';
+      raf = busy && visible ? requestAnimationFrame(frame) : 0;
+    }
+
+    function kick() {
+      if (!raf && visible) { last = performance.now(); raf = requestAnimationFrame(frame); }
+    }
+
+    // ---- input
+    screen.addEventListener('keydown', (e) => {
+      if (mode === 'card') {
+        if (e.key === 'Escape') { e.preventDefault(); closeCard(); kick(); }
+        return;
+      }
+      const k = e.key;
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
+      else if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
+      else if (k === ' ' || k === 'ArrowUp') {
+        e.preventDefault();
+        if (mode === 'playing') keys.fire = true;
+      } else if (k === 'Enter') {
+        e.preventDefault();
+        if (mode === 'attract' || mode === 'over') start();
+        else if (mode === 'paused') mode = 'playing';
+      } else if (k === 'Escape' || k === 'p' || k === 'P') {
+        if (mode === 'playing') { mode = 'paused'; e.preventDefault(); }
+        else if (mode === 'paused') { mode = 'playing'; e.preventDefault(); }
+      }
+      kick();
+    });
+    screen.addEventListener('keyup', (e) => {
+      const k = e.key;
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
+      else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
+      else if (k === ' ' || k === 'ArrowUp') keys.fire = false;
+    });
+    screen.addEventListener('blur', (e) => {
+      keys.left = keys.right = keys.fire = false;
+      const next = e.relatedTarget as Node | null;
+      if (mode === 'playing' && !(next && screen.contains(next))) { mode = 'paused'; draw(); }
+    });
+    screen.addEventListener('pointerdown', (e) => {
+      if ((e.target as HTMLElement).closest('[data-card]')) return;
+      if (mode === 'attract' || mode === 'over') { start(); kick(); }
+      else if (mode === 'paused') { mode = 'playing'; screen.focus({ preventScroll: true }); kick(); }
+      else if (mode === 'playing') {
+        // Tap/click on the screen moves the prompt there and fires.
+        const rect = canvas.getBoundingClientRect();
+        player.x = e.clientX - rect.left;
+        keys.fire = true;
+        setTimeout(() => { keys.fire = false; }, 120);
+      }
+    });
+    // Esc inside the card bubbles to the screen's keydown handler, which closes it.
+    card.querySelector('[data-card-close]')!.addEventListener('click', () => { closeCard(); kick(); });
+
+    root.querySelectorAll<HTMLButtonElement>('[data-touch]').forEach((btn) => {
+      const which = btn.dataset.touch as 'left' | 'right' | 'fire';
+      const set = (v: boolean) => (e: Event) => {
+        e.preventDefault();
+        if (v && (mode === 'attract' || mode === 'over')) start();
+        if (v && mode === 'paused') mode = 'playing';
+        keys[which] = v;
+        kick();
+      };
+      btn.addEventListener('pointerdown', set(true));
+      btn.addEventListener('pointerup', set(false));
+      btn.addEventListener('pointerleave', set(false));
+      btn.addEventListener('pointercancel', set(false));
+    });
+
+    // Stop the loop when the cabinet scrolls out of view.
+    new IntersectionObserver((entries) => {
+      visible = entries[0]?.isIntersecting ?? true;
+      if (!visible && mode === 'playing') mode = 'paused';
+      if (visible) { draw(); kick(); }
+    }).observe(screen);
+
+    new ResizeObserver(() => resize()).observe(screen);
+    if (document.fonts) document.fonts.ready.then(() => resize());
+    resize();
+    kick();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-arcade]').forEach(initArcade);
+</script>

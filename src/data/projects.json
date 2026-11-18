@@ -11,22 +11,6 @@
 		"slug": "strata-db"
 	},
 	{
-		"title": "Letterboxd CLI (My Movies)",
-		"desc": "A local-first movie recommendation engine and watchlist manager. It builds a personalized taste profile by analyzing Letterboxd history and uses semantic search to find similar films from the TMDb database.",
-		"task": "Implement a hybrid recommendation system using vector embeddings and provide an interactive CLI for seamless movie discovery.",
-		"tech": ["TypeScript", "ChromaDB", "SQLite", "TMDb API", "Inquirer.js"],
-		"link": "https://github.com/Otagera/MY-MOVIES-CLI",
-		"year": "2025"
-	},
-	{
-		"title": "Chatterbox Logging Engine",
-		"desc": "A secure log management and background job processing engine. Features real-time log ingestion, advanced filtering, and encrypted storage with a dynamic HTMX-powered dashboard.",
-		"task": "Build a high-performance logging engine with encrypted storage and a dynamic dashboard for real-time monitoring.",
-		"tech": ["Node.js", "TypeScript", "HTMX", "Express.js", "MongoDB", "BullMQ", "Redis", "MikroORM"],
-		"link": "https://github.com/Otagera/CHATTERBOX",
-		"year": "2025"
-	},
-	{
 		"title": "Lumina",
 		"desc": "Lumina is an AI Intelligence Layer for your photo library. It allows users to organize photos, perform advanced face recognition, and host Collaborative Events. The platform separates AI compute from physical storage, offering a Bring Your Own Storage (BYOS) model that gives users full control over their data while leveraging powerful facial recognition and search.",
 		"task": "Develop a face-recognition-powered photo gallery with real-time updates and efficient background processing.",
@@ -38,20 +22,76 @@
 		"slug": "lumina"
 	},
 	{
+		"title": "Paratransit Map",
+		"desc": "Danfo, keke and okada directions for Lagos, built from anonymous rider logs. Riders log trips from a PWA, and a nightly job aggregates them into routes and stops for transport that no official map covers.",
+		"task": "Build a geospatial API and worker in Rust over PostGIS, with a seed importer that validates every stop, route and trip (coordinates, LGA boundaries, plausible speeds) before writing anything.",
+		"tech": ["Rust", "Axum", "sqlx", "PostgreSQL + PostGIS", "SolidJS", "PWA"],
+		"live": "https://paratransit.otagera.xyz",
+		"year": "2026"
+	},
+	{
+		"title": "Weir",
+		"desc": "A load balancer built from scratch in Rust, as a learning project. TCP and HTTP/1.1 proxying, six balancing strategies, health checks and failover, keep-alive, rate limiting, hot reload, metrics, TLS with SNI and a live dashboard.",
+		"task": "Learn how load balancers work by building one, then measure it: 90–95% of nginx's throughput in a single-laptop benchmark, and a script that breaks it on purpose.",
+		"tech": ["Rust", "Tokio", "rustls", "HTTP/1.1", "Docker"],
+		"link": "https://github.com/Otagera/weir",
+		"year": "2026"
+	},
+	{
+		"title": "Couch",
+		"desc": "A self-hosted what-to-watch app. It reads TV history from Simkl and films from Letterboxd, adds posters and where-to-watch from TMDB, knows what's on my drives, and asks a cheap LLM for picks explained in terms of what I've already watched.",
+		"task": "Rebuild an old Letterboxd CLI as a dependency-free TypeScript core over node:sqlite with a TanStack Start UI, quota-aware syncs, a cached LLM taste profile and passkey sign-in.",
+		"tech": ["TypeScript", "TanStack Start", "node:sqlite", "TMDB API", "OpenRouter", "WebAuthn", "Docker"],
+		"link": "https://github.com/Otagera/couch",
+		"year": "2026",
+		"writeup": "/writing/comics-and-couch"
+	},
+	{
+		"title": "Comics",
+		"desc": "A sidecar for Komga that catalogues a comic archive on Google Drive, tracks reading, keeps a wishlist, decides what stays cached on a small server's disk, and syncs progress to a Notion reading log.",
+		"task": "Treat Drive as the source of truth and local disk as a cache: atomic fetches, eviction ranked by real reading state, covers pulled from partial archive downloads, and a Notion sync that never moves a row backwards.",
+		"tech": ["TypeScript", "TanStack Start", "SQLite", "Komga", "rclone", "Notion API", "Docker"],
+		"link": "https://github.com/Otagera/comics",
+		"year": "2026",
+		"writeup": "/writing/comics-and-couch"
+	},
+	{
+		"title": "Chatterbox Logging Engine",
+		"desc": "A secure log management and background job processing engine. Features real-time log ingestion, advanced filtering, and encrypted storage with a dynamic HTMX-powered dashboard.",
+		"task": "Build a high-performance logging engine with encrypted storage and a dynamic dashboard for real-time monitoring.",
+		"tech": ["Node.js", "TypeScript", "HTMX", "Express.js", "MongoDB", "BullMQ", "Redis", "MikroORM"],
+		"link": "https://github.com/Otagera/CHATTERBOX",
+		"year": "2025"
+	},
+	{
 		"title": "Indyer",
-		"desc": "A daily guess-the-name puzzle about notable Nigerians, styled after a newsprint archive. Players work through source-cited clues under a strikethrough guess tracker, then share a server-rendered results card.",
+		"desc": "A daily guess-the-name puzzle about notable Nigerians, styled after a newsprint archive. Work through source-cited clues, then share a server-rendered results card.",
 		"task": "Build a Wordle-style daily puzzle game with fuzzy-matched guessing, seeded daily selection, and a shareable SVG/PNG results card.",
 		"tech": ["TypeScript", "Hono", "React", "Drizzle ORM", "PostgreSQL", "Tailwind CSS"],
 		"link": "https://github.com/Otagera/indyer",
 		"year": "2026",
-		"featured": true
+		"featured": true,
+		"playground": true,
+		"live": "https://indyer.otagera.xyz"
 	},
 	{
-		"title": "Lagos Governor Sim",
-		"desc": "A decision-driven governance simulation set in Lagos, Nigeria — think Frostpunk, not SimCity. Players serve a 4-year term as Governor, making choices from event cards that cascade into political, fiscal, and social consequences weeks later.",
-		"task": "Model a political economy simulation with cascading stat systems, faction dynamics, and multi-layer decision chains across a 208-week term.",
+		"title": "Excellency",
+		"desc": "Govern a Nigerian state, starting with Lagos. A decision-driven sim: serve a 4-year term as Governor, choosing from event cards whose political, fiscal and social consequences land weeks later.",
+		"task": "Model a political economy with cascading stats, faction dynamics and multi-layer decision chains across a 208-week term.",
 		"tech": ["TypeScript", "React", "Zustand", "Rust", "Axum", "SeaORM", "PostgreSQL"],
 		"link": "https://github.com/Otagera/lag-sim",
-		"year": "2026"
+		"year": "2026",
+		"playground": true,
+		"live": "https://excellency.otagera.xyz"
+	},
+	{
+		"title": "Transport Game",
+		"desc": "A transport-infrastructure game on a flat 2D map with a Lagos flavour: run buses, trains and ferries alongside the informal danfo, keke and okada networks.",
+		"task": "Build a tick-based transport and economy simulation with goods chains, informal competitors and a 3D view, then find the game around it.",
+		"tech": ["TypeScript", "Three.js", "Vite", "Bun"],
+		"link": "https://github.com/Otagera/transport-game",
+		"year": "2026",
+		"playground": true,
+		"live": "https://transport-game.otagera.xyz"
 	}
 ]
