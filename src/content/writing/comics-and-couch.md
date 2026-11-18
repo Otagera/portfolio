@@ -6,11 +6,11 @@ summary: "A Komga sidecar that treats Google Drive as the source of truth and th
 tags: ["typescript", "self-hosting", "komga", "sqlite", "llm", "coolify", "tanstack-start"]
 ---
 
-I've built two small apps recently that turned out to be the same app.
+This is a story about using AI agents to build very personal, very niche web apps. This time, those were Comics and Couch.
 
-[Comics](https://github.com/Otagera/comics) sits next to [Komga](https://komga.org) and manages a comic archive that lives on Google Drive: what's in it, what I've read, what I want, and what's worth keeping on the server's limited disk. [Couch](https://github.com/Otagera/couch) does the same job for TV and film: it reads what I've watched from Simkl and Letterboxd, knows which services I pay for and what's on my drives, and tells me what to watch next.
+First, [Comics](https://github.com/Otagera/comics) sits next to [Komga](https://komga.org) and manages a comic archive that lives on Google Drive: what's in it, what I've read, what I want, and what's worth keeping on the server's limited disk. Secondly, [Couch](https://github.com/Otagera/couch) does the same job for TV and film: it reads what I've watched from Simkl and Letterboxd, knows which services I pay for and possibly what's on my drives, and suggests what to watch next.
 
-Comics took a couple of days in September, plus a few rounds of fixes after because I was still refining the idea. Couch had been through several versions earlier in the year without reaching this form. In November it took one day, because by then the skeleton existed: a dependency-free TypeScript core over SQLite, a TanStack Start UI, a shared theme, and a deploy pipeline I'd already fought with. This post covers both, and the pattern underneath them.
+Comics took a couple of days in September, plus a few rounds of fixes after because I was still refining the idea. Couch had been through several versions earlier in the year without reaching this form. In November it took just one day, because by then the skeleton existed: a TypeScript core over SQLite with almost no dependencies, a TanStack Start UI, a shared theme, and a deploy pipeline I'd already fought with. This post covers both, and the pattern underneath them.
 
 ---
 
@@ -18,7 +18,7 @@ Comics took a couple of days in September, plus a few rounds of fixes after beca
 
 ### The problem
 
-I have a digital comic archive that lives on Google Drive. It's large, and the server that reads it is a small VPS with a root disk that was already uncomfortably full (pushing 90%). Before this, I had a script (`cxsync`) that pulled files from Drive into [ComiXed](https://comixed.org), evicting old ones when space ran low. It worked, but ComiXed records *that* you read a comic, never *when*, so eviction had to guess from file access times. ComiXed's UI also felt clunky and dated, and while researching alternatives I learned about [OPDS](https://opds.io), the standard feed format for digital libraries, which meant I could pick a server and a reader app separately.
+I have a digital comic archive that lives on Google Drive. It's large, and the server that reads it is a small VPS with a root disk that was already uncomfortably full (pushing 90%). Before this, I used a script (`cxsync`) that pulled files from Drive into [ComiXed](https://comixed.org), evicting old ones when space ran low. It worked, but ComiXed records *that* you read a comic, never *when*, so eviction had to guess from file access times. ComiXed's UI also felt clunky and dated, and while researching alternatives I learned about [OPDS](https://opds.io), the standard feed format for digital libraries, which meant I could pick a server and a reader app separately.
 
 So I moved to Komga, which serves the library: I read in its web reader, or on my phone through [CDisplayEx](https://www.cdisplayex.com) over OPDS. Then I wrote a sidecar around it with a clear split:
 
@@ -43,11 +43,11 @@ budget check -> evict if needed -> rclone into staging -> verify size
   -> atomic rename into the library -> Komga scan -> confirm the book exists
 ```
 
-Two details carry the weight. Staging lives on the same filesystem as the library, so the final move is a `rename` and Komga's scanner never sees a partially written archive. And the destination folder is named for the *parsed* series, not Drive's folder, because Komga derives series from directory structure, and my Drive folders mix publishers, catch-alls and actual series.
+Two details to note. Staging lives on the same filesystem as the library, so the final move is a `rename` and Komga's scanner never sees a partially written archive. And the destination folder is named for the *parsed* series, not Drive's folder, because Komga derives series from directory structure, and my Drive folders mix publishers, catch-alls and actual series.
 
 ### Eviction from real reading state
 
-Komga exposes `readDate` and progress per book, so eviction can rank by what I've actually done rather than file metadata:
+Space is limited, so something has to go. Komga exposes `readDate` and progress per book, so eviction can rank by what I've actually done rather than file metadata:
 
 ```typescript
 /** Higher score = evict sooner. */
@@ -64,7 +64,7 @@ Abandoned goes first, then finished, then fetched-but-never-opened. In-progress 
 
 Deleting is safe because Drive holds the master, and the Komga library has `emptyTrashAfterScan` off: Komga keeps the book's row and read history and just marks it unavailable. Re-fetching brings it back with progress intact.
 
-The header in the catalogue UI carries a capacity meter for quick glance: a gradient fill with a hard tick at the eviction budget, so "how full" and "how full am I allowed to be" are never the same shape. The detail view warns when a fetch would push past budget. That gradient appears there and on read progress and nowhere else, so in this app a gradient always means a quantity.
+The header in the catalogue UI carries a capacity meter for quick glance: a gradient fill with a hard tick at the eviction budget, so "how full" and "how full am I allowed to be" are never the same shape. The detail view warns when a fetch would push past budget.
 
 ![The comics catalogue: cover grid with the capacity meter in the header](/writing/comics-and-couch/comics-grid.webp)
 
@@ -96,7 +96,7 @@ The same truncated-head listing also catches **bundles**: zips that hold a folde
 
 ### Syncing to a Notion log without overwriting it
 
-I keep a hand-written reading log in Notion that goes back years before this sidecar existed. The sync to it is one-way and deliberately timid:
+I keep a hand-written reading log in Notion (as one does) that goes back years before this sidecar existed. I wanted to keep it updated just for the sake of it, so the sync to it is one-way and deliberately timid:
 
 - It writes exactly four properties: Name (on creation only), Type, Status, Completed Date. No code path builds a payload with my Author, Rating or Description fields.
 - **It never moves a row backwards.** The first real sync turned four "Done" rows into "Not started", because the sidecar had no history for comics I'd read years ago, or on paper. Status now only moves forward along *Not bought → Not started → In progress → Done*.
@@ -123,9 +123,11 @@ The stack is one compose file deployed through [Coolify](https://coolify.io): pu
 
 TV and films had a similar problem to comics. I track TV on [Simkl](https://simkl.com) and films on [Letterboxd](https://letterboxd.com). Neither knows about the other, neither knows which streaming services I pay for, and neither knows about the files on my external drives. It also just seemed like a fun thing to build.
 
+> Why track all of this? I can't speak for everyone, but I like knowing where I stopped so I can pick back up, and I like having the data. What I do with it later is up to me.
+
 The first version, earlier in the year, was a CLI (it was peak CLI season). I'd exported my Letterboxd data and wanted to play with it: recommendations from my watchlist, using local embeddings to find new films. It grew ChromaDB, those embeddings, Puppeteer and Inquirer, and installing it became a chore. I tagged it as `v1-movies-cli` and started again on the comics skeleton.
 
-[Couch](https://couch.otagera.xyz) is the result, and it answers one question: what should I watch next? It reads history from Simkl and Letterboxd, fills in posters, air dates and where-to-watch from [TMDB](https://www.themoviedb.org), and asks an LLM (through [OpenRouter](https://openrouter.ai)) for picks, each explained in terms of things I've already watched. First commit to deployed took one day, because the pieces it needed were already there.
+[Couch](https://couch.otagera.xyz) is the result, and it tries to answer one question: what should I watch next? It reads history from Simkl and Letterboxd, fills in posters, air dates and where-to-watch from [TMDB](https://www.themoviedb.org), and asks an LLM (through [OpenRouter](https://openrouter.ai)) for picks, each explained in terms of things I've already watched. First commit to deployed took one day, because the pieces it needed were already there.
 
 ### Syncing Simkl without burning the quota
 
@@ -189,7 +191,7 @@ const score = (c: Candidate) =>
 
 ### TV and films as equals
 
-The first UI was TV-first because Simkl came first (Claude was Clauding). That was wrong: I don't decide between a TV evening and a film evening up front. The home page is organised by what I'd do next, both mixed: *Up next* (shows in progress plus the next film in lists I'm working through), *Ready tonight* (new episodes plus watchlist films on my services), then list progress, coming soon, and paused shows.
+The first UI was TV-first because Simkl came first (Claude was Clauding). That was wrong: I don't decide between a TV evening and a film evening up front, and if I only wanted TV, I'd just open Simkl. The home page is organised by what I'd do next, both mixed: *Up next* (shows in progress plus the next film in lists I'm working through), *Ready tonight* (new episodes plus watchlist films on my services), then list progress, coming soon, and paused shows.
 
 ![Couch home: Up next and Ready tonight, TV and films mixed](/writing/comics-and-couch/couch-home.webp)
 
@@ -197,7 +199,7 @@ Small fix along the way: Simkl's episode total includes episodes that haven't ai
 
 ### Knowing what's on my drives
 
-Comics knows what's on its disk because it put it there. Couch has to find out, so it has a scanner, run on whichever machine the drives are plugged into, that can push results to the deployed app:
+I also have films and TV shows on external drives that I want tracked. Comics knows what's on its disk because it put it there; Couch has to find out, so it has a scanner, run on whichever machine the drives are plugged into, that can push results to the deployed app:
 
 ```bash
 npm run cli -- scan /Volumes/MyDrive --dry-run
