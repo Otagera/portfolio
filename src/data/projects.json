@@ -17,7 +17,6 @@
 		"tech": ["React", "ElysiaJS", "Bun", "PostgreSQL", "Python (face recognition)"],
 		"link": "https://github.com/Otagera/lumina",
 		"year": "2026",
-		"featured": true,
 		"writeup": "/writing/lumina",
 		"slug": "lumina"
 	},
@@ -35,6 +34,7 @@
 		"task": "Learn how load balancers work by building one, then measure it: 90–95% of nginx's throughput in a single-laptop benchmark, and a script that breaks it on purpose.",
 		"tech": ["Rust", "Tokio", "rustls", "HTTP/1.1", "Docker"],
 		"link": "https://github.com/Otagera/weir",
+		"featured": true,
 		"year": "2026"
 	},
 	{
@@ -61,6 +61,7 @@
 		"task": "Build a high-performance logging engine with encrypted storage and a dynamic dashboard for real-time monitoring.",
 		"tech": ["Node.js", "TypeScript", "HTMX", "Express.js", "MongoDB", "BullMQ", "Redis", "MikroORM"],
 		"link": "https://github.com/Otagera/CHATTERBOX",
+		"featured": true,
 		"year": "2025"
 	},
 	{
@@ -70,7 +71,6 @@
 		"tech": ["TypeScript", "Hono", "React", "Drizzle ORM", "PostgreSQL", "Tailwind CSS"],
 		"link": "https://github.com/Otagera/indyer",
 		"year": "2026",
-		"featured": true,
 		"playground": true,
 		"live": "https://indyer.otagera.xyz"
 	},

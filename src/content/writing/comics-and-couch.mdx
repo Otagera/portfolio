@@ -1,21 +1,25 @@
 ---
 title: "Comics and Couch: Two Self-Hosted Media Management Apps"
 date: "2026-11-18"
-readTime: "17 min"
+readTime: "21 min"
 summary: "A Komga sidecar that treats Google Drive as the source of truth and the server's disk as a cache, and a what-to-watch app built on the same skeleton two months later in a day."
 tags: ["typescript", "self-hosting", "komga", "sqlite", "llm", "coolify", "tanstack-start"]
 ---
 
+import EvictionSimWidget from "../../components/writing/EvictionSimWidget.astro";
+import FilenameParserWidget from "../../components/writing/FilenameParserWidget.astro";
+
 This is the golden age of personal software.
 
-Well if I was like a CEO of a AI company those are the kind of things i would say often, but alas I am not. But that doesn't make it any less true. I made what I considered to be 2 cool very personal and niche web applications with the help of AI and I decided to yap about it here. So enjoy.
+Well, if I were the CEO of an AI company, that's the kind of thing I'd say a lot, but alas, I am not. That doesn't make it any less true. With the help of AI, I made two very personal, very niche web applications that I think are pretty cool, and I decided to yap about them here. So enjoy.
 
-They are generically called Comics and Couch.
+They have very generic names: Comics and Couch.
 
-First, [Comics](https://github.com/Otagera/comics) which sits next to [Komga](https://komga.org) and it manages a comic archive that lives on Google Drive: to show what's in it, what I've read, what I want, and what's worth keeping on the server's limited disk. Secondly, [Couch](https://github.com/Otagera/couch) does the same job for TV and film: it reads what I've watched from Simkl and Letterboxd, knows which services I pay for and possibly what's on my drives, and suggests what to watch next.
+First, [Comics](https://github.com/Otagera/comics) sits next to [Komga](https://komga.org) and manages a comic archive that lives on Google Drive: what's in it, what I've read, what I want, and what's worth keeping on the server's limited disk. Second, [Couch](https://github.com/Otagera/couch) does the same job for TV and film: it reads what I've watched from Simkl and Letterboxd, knows which services I pay for and possibly what's on my drives, and suggests what to watch next.
 
-When working on Comics earlier in September it took a couple of days, plus a few rounds of fixes after because I was still refining the idea. So when it came to back to Couch in November it took just one day (it had been through several versions earlier in the year without reaching this form), because by then the skeleton existed: a TypeScript core over SQLite with almost no dependencies, a TanStack Start UI, a shared theme, and a deploy pipeline I'd already fought with. 
-The essence of this post is to covers both applications, and the patterns underneath them.
+Comics took a couple of days in September, plus a few rounds of fixes afterwards because I was still refining the idea. When I came back to Couch in November, it took just one day (it had been through several versions earlier in the year without reaching this form), because by then the skeleton existed: a TypeScript core over SQLite with almost no dependencies, a TanStack Start UI, a shared theme, and a deploy pipeline I'd already fought with.
+
+This post covers both applications and the patterns underneath them.
 
 ---
 
@@ -23,25 +27,27 @@ The essence of this post is to covers both applications, and the patterns undern
 
 ### The problem
 
-If we would call it a problem. The thing is I have a digital comic archive that I have backed up on Google Drive. It's a bit large (about 43.3 GB), and the server that reads it is a small VPS(link to article on setting up the vps) with a root disk that was already uncomfortably full (pushing 90%). Before this, I tried using a script (`cxsync`) that pulled files from Drive into [ComiXed](https://comixed.org), evicting old ones when space ran low. It worked, but ComiXed records *that* you read a comic, never *when*, so eviction had to guess from file access times. Plus ComiXed's UI also felt clunky and dated, and while researching alternatives I learned about [OPDS](https://opds.io), the standard feed format for digital libraries (digital books and manga can also be served with it, If I read a lot of digital books I would have expanded this to include that too, but I unfortuanaly don't read as much books as I should and in the little I do read I don't enjoy digital reading), which meant I could pick a server and a reader app separately.
+If we can call it a problem: I have a digital comic archive backed up on Google Drive. It's a bit large (about 43.3 GB), and the server that reads it is a small [VPS](/writing/deploying-lumina) with a root disk that was already uncomfortably full (pushing 90%). Before this, I tried using a script (`cxsync`) that pulled files from Drive into [ComiXed](https://comixed.org), evicting old ones when space ran low. It worked, but ComiXed records *that* you read a comic, never *when*, so eviction had to guess from file access times. Plus, ComiXed's UI felt clunky and dated, and while researching alternatives I learned about [OPDS](https://opds.io), the standard feed format for digital libraries (it serves digital books and manga too. If I read a lot of digital books I'd have expanded this to cover them, but unfortunately I don't read as many books as I should, and of the few I do read, I don't enjoy reading them digitally), which meant I could pick a server and a reader app separately.
 
-So I moved to Komga, which serves the library: I read in its web reader, or on my phone through [CDisplayEx](https://www.cdisplayex.com) over OPDS. ow with CDisplayEx, to be honest it was a bit diffuclt picking a good app because they all kind of suck to be honest. If you have not read a comic in you phone before let me try to explain why, digital comics unlike unlike books cannot be broken up say mid-page because an entire page is important, infact sometimes 2 pages and trust me in the hands of very good artists and storytellers it can be a very good use of the page, so you can imagine how it would be difficult to show the on a "small" 6.4-inch display on a phone. So when I went looking I needed an app that would reading into OPDS and then feed back to it and display what I am reading well. There were other issues with pricing and testing an app afterwards etc, but the by some strock of luck I realised that the app i was already using - CDisplayEx had a pro tier that used OPDS well so I just paid for it (it cost me ₦1,850.00).
+So I moved to Komga, which serves the library: I read in its web reader, or on my phone through [CDisplayEx](https://www.cdisplayex.com) over OPDS.
+
+Now, about CDisplayEx. Picking a good app was a bit difficult, because to be honest, they all kind of suck. If you've never read a comic on your phone, let me try to explain why. Unlike books, digital comics can't be broken up mid-page, because the entire page matters, and sometimes two pages do. Trust me, in the hands of very good artists and storytellers, the page gets used very well, so you can imagine how hard it is to show one on a "small" 6.4-inch phone display. So I needed an app that would read from OPDS, report progress back to it, and display what I'm reading well. There were other issues too, like pricing and testing each app, but by some stroke of luck I realised the app I was already using, CDisplayEx, had a pro tier that handled OPDS well, so I just paid for it (it cost me ₦1,850).
 
 Once that was settled, I wrote a sidecar around Komga with a clear split:
 
-- **Komga** serves and reads comics, and owns metadata because that is what the project is about and makes easy.
+- **Komga** serves and reads comics, and owns metadata, because that's what the project is about and what it makes easy.
 - **The sidecar** catalogues the Drive archive, tracks reading, holds a wishlist, decides what's cached on disk (very important), and syncs with my list on Notion.
 - **Google Drive** is the source of truth, since I already pay for Google One storage for my photos. The local volume is just a cache over it. (The obvious caveat: a DMCA notice could make Drive a lot less reliable as a source of truth someday.)
 
 The sidecar never reads a comic and never edits metadata. Keeping that boundary sharp is what keeps the application small.
 
-### How to contact the Drive
+### Contacting Drive
 
-The sidecar's catalogue UI reads SQLite only (thats all you need for this kind of application). Drive is contacted in exactly one module, on an hourly cron plus a manual refresh button, so browsing can never burn Drive API quota however the UI behaves. Listing and copying go through `rclone`. (rclone deserves its own post someday. I also use it to back up my machine to Google Drive, and it's one of the simplest, most intuitive tools I know.)
+The sidecar's catalogue UI reads SQLite only (that's all you need for this kind of application). Drive is contacted in exactly one module, on an hourly cron plus a manual refresh button, so browsing can never burn Drive API quota however the UI behaves. Listing and copying go through `rclone`. (rclone deserves its own post someday. I also use it to back up my machine to Google Drive, and it's one of the simplest, most intuitive tools I know.)
 
 The schema is ID-first. Every comic gets a stable internal id the first time it's seen, and is re-identified on later refreshes by its Drive file id, which survives renames and moves. Path is only a fallback. Columns for `komga_id` and `notion_page_id` were nullable from day one, so the Notion sync I added later was a column fill, not a migration.
 
-### Fetching without Komga
+### Fetching from Drive
 
 Fetching a title from Drive keeps cxsync's shape, with ComiXed's three-call import replaced by a Komga scan:
 
@@ -54,7 +60,7 @@ Two details to note. Staging lives on the same filesystem as the library, so the
 
 ### Keeping it fresh
 
-Space is limited, so something we came to the conclusion that some files have to go from time to time to time. Thankfully Komga exposes `readDate` and progress per book, so eviction can rank by what I've actually done rather than just file metadata:
+Space is limited, so we came to the conclusion that some files have to go from time to time. Thankfully, Komga exposes `readDate` and progress per book, so eviction can rank by what I've actually done rather than just file metadata:
 
 ```typescript
 /** Higher score = evict sooner. */
@@ -71,13 +77,21 @@ Abandoned goes first, then finished, then fetched-but-never-opened. In-progress 
 
 Deleting is safe because Drive holds the master, and the Komga library has `emptyTrashAfterScan` off: Komga keeps the book's row and read history and just marks it unavailable. Re-fetching brings it back with progress intact.
 
+Here's the scorer on a pretend shelf. Fetch something from Drive and watch what makes room, then change a book's state, pin one, or let a day pass and fetch again:
+
+<EvictionSimWidget />
+
 The header in the catalogue UI carries a capacity meter for quick glance: a gradient fill with a hard tick at the eviction budget, so "how full" and "how full am I allowed to be" are never the same shape. The detail view warns when a fetch would push past budget.
 
 ![The comics catalogue: cover grid with the capacity meter in the header](/writing/comics-and-couch/comics-grid.webp)
 
 ### Parsing filenames
 
-Comic filenames are usually a mess, especially given where mine come from (*wink*), and the parser kept finding new cases to deal with in real data:
+Comic filenames are usually a mess, especially given where mine come from (*wink*), and the parser kept finding new cases to deal with in real data. Try the real parser on a few of them, or paste your own:
+
+<FilenameParserWidget />
+
+The cases that taught it the most:
 
 - `History of the Marvel Universe 001-006` is one release containing issues 1 to 6, not a series called "...001-006". Ranges are now stored as the issue.
 - `DC/The Man of Steel 01-06 (1986)/` holds six issue files. The trailing number on each file was being kept as part of the series name, so one six-issue story became six series. The number is now stripped *only for comparing against the folder*, so a title that genuinely ends in a number, like *Top 10*, keeps it.
@@ -85,9 +99,9 @@ Comic filenames are usually a mess, especially given where mine come from (*wink
 
 ### Covers
 
-Most of the grid was blank at first deployment, because only cached comics had art (Komga generates thumbnails from local files). I didn't want to ask a third-party catalogue what a book looks like: doing matching on a scene-release filename is the same fuzzy match that once put *Dark Victory* on two different Batman rows.
+Most of the grid was blank at first deployment, because only cached comics had art (Komga generates thumbnails from local files). I didn't want to ask a third-party catalogue what a book looks like: matching on a scene-release filename is the same fuzzy match that once put *Dark Victory* on two different Batman rows.
 
-The cover is already inside the archive on Drive. So what was done in the sidecar is to fetch only the head of each file (4 MB, escalating to 16 MB) and list it with `bsdtar`, which reads RAR and ZIP alike. On a 590 MB *Watchmen* `.cbr`, 4 MB in was enough to get a real JPEG out. Something we had to take note of is that archive order isn't neccesarily page order, so it takes the lowest-numbered image present, and checks the bytes for an image signature before writing.
+The cover is already inside the archive on Drive. So the sidecar fetches only the head of each file (4 MB, escalating to 16 MB) and lists it with `bsdtar`, which reads RAR and ZIP alike. On a 590 MB *Watchmen* `.cbr`, 4 MB in was enough to get a real JPEG out. One thing to note is that archive order isn't necessarily page order, so it takes the lowest-numbered image present, and checks the bytes for an image signature before writing.
 
 Getting there took three bugs in a row:
 
@@ -103,7 +117,7 @@ The same truncated-head listing also catches **bundles**: zips that hold a folde
 
 ### Syncing to a Notion log
 
-Before building this I kept (still do) a hand-written log in Notion (as one does) for keeping track of what I am reading and what I want to read that goes back years before this sidecar existed. I wanted to keep it updated just for the sake of it, so the sync to it is one-way and deliberately timid:
+Before building this, I kept (and still keep) a hand-written log in Notion (as one does) of what I'm reading and what I want to read. It goes back years before this sidecar existed. I wanted to keep it updated just for the sake of it, so the sync to it is one-way and deliberately timid:
 
 - It writes exactly four properties: Name (on creation only), Type, Status, Completed Date. No code path builds a payload with my Author, Rating or Description fields.
 - **It never moves a row backwards.** The first real sync turned four "Done" rows into "Not started", because the sidecar had no history for comics I'd read years ago, or on paper. Status now only moves forward along *Not bought → Not started → In progress → Done*.
@@ -128,17 +142,18 @@ The stack is one compose file deployed through [Coolify](https://coolify.io): pu
 
 ### Same shape, different media
 
-I had a similar problem with respect to the TV and films I watch to comics comics problem. But the similarities go only so far. I track TV on [Simkl](https://simkl.com) and films on [Letterboxd](https://letterboxd.com). Neither knows about the other, neither knows which streaming services I pay for, and neither knows about the files on my external drives. It also just seemed like a fun thing to build.
+I had a similar problem with the TV and films I watch, though the similarities only go so far. I track TV on [Simkl](https://simkl.com) and films on [Letterboxd](https://letterboxd.com). Neither knows about the other, neither knows which streaming services I pay for, and neither knows about the files on my external drives. It also just seemed like a fun thing to build.
 
-> Why track all of this? I can't speak for everyone, but I like knowing where I stopped so I can pick back up, and I like having the data. What I do with it later is up to me. (I have a jotter from like 2018/19 where I was nothing down seires i was watching and where I stopped cause we were doing manual downloads across time. I can attach a picture of it)
+> Why track all of this? I can't speak for everyone, but I like knowing where I stopped so I can pick back up, and I like having the data. What I do with it later is up to me. (I have a jotter from around 2018/19 where I noted down the series I was watching and where I stopped, because back then we were doing manual downloads over time.)
+{/* TODO: add a photo of the jotter */}
 
-The first version, earlier in the year, was a CLI (it was peak CLI season). I'd exported my Letterboxd data and wanted to play with it: get recommendations from my watchlist, using local embeddings to find new films. It used Puppeteer, Inquirer and ChromaDB because I wanted cheap local embeddings but it was difficult installing and not too goot results because think about it, if we get embendings of movies watched and watchlist we woukd need embeddings of all movies in the world to get then ge able to get good recomendations. I tagged it as `v1-movies-cli` and started again on the comics skeleton.
+The first version, earlier in the year, was a CLI (it was peak CLI season). I'd exported my Letterboxd data and wanted to play with it: get recommendations from my watchlist, using local embeddings to find new films. It used Puppeteer, Inquirer and ChromaDB, because I wanted cheap local embeddings, but it was difficult to install and the results weren't great. Think about it: with embeddings of only the films I'd watched and my watchlist, I'd need embeddings of every film in the world to get good recommendations. I tagged it as `v1-movies-cli` and started again on the comics skeleton.
 
-[Couch](https://couch.otagera.xyz) is the result, and it tries to answer one question: what should I watch next? I ditched the cli and went full wen application like Comics. How it works - It reads history from Simkl and Letterboxd, fills in posters, air dates and where-to-watch from [TMDB](https://www.themoviedb.org), and asks an LLM (through [OpenRouter](https://openrouter.ai)) for picks, each explained in terms of things I've already watched. First commit to deployed took one day, because the pieces it needed were already there.
+[Couch](https://couch.otagera.xyz) is the result, and it tries to answer one question: what should I watch next? I ditched the CLI and went with a full web application, like Comics. Here's how it works: it reads history from Simkl and Letterboxd, fills in posters, air dates and where-to-watch from [TMDB](https://www.themoviedb.org), and asks an LLM (through [OpenRouter](https://openrouter.ai)) for picks, each explained in terms of things I've already watched. First commit to deployed took one day, because the pieces it needed were already there.
 
 ### Syncing Simkl
 
-Simkl's free tier allows 500 API calls a day so we need to make sure we do it without burning the quota, so Couch syncs every six hours plus whenever I press Sync. It asks `/sync/activities` first and only downloads the library when the TV timestamp has moved:
+Simkl's free tier allows 500 API calls a day, so syncing can't burn through the quota. Couch syncs every six hours plus whenever I press Sync. It asks `/sync/activities` first and only downloads the library when the TV timestamp has moved:
 
 ```typescript
 const tvActivity = activities.tv_shows?.all ?? null;
@@ -167,9 +182,9 @@ This is the same rule as the Notion sync in comics: an external source must not 
 
 ### Films from Letterboxd
 
-So getting data off letterboxd is a bit tricky, because Access to the Letterboxd API is available by request only, so we make do. Films come from the Letterboxd export zip (full history, ratings, reviews, watchlist, lists) plus the public diary RSS feed for new watches. The Taste page takes the export as an upload, read by an 80-line zip reader on `node:zlib`. It reads the central directory at the end of the file, inflates stored or deflated entries, and only writes files it recognises from the export under fixed names, so a crafted path inside the archive has nowhere to go.
+Getting data off Letterboxd is a bit tricky, because access to the Letterboxd API is by request only, so we make do. Films come from the Letterboxd export zip (full history, ratings, reviews, watchlist, lists) plus the public diary RSS feed for new watches. The Taste page takes the export as an upload, read by an 80-line zip reader on `node:zlib`. It reads the central directory at the end of the file, inflates stored or deflated entries, and only writes files it recognises from the export under fixed names, so a crafted path inside the archive has nowhere to go.
 
-Something else to handle was lists. On Lettweboxd the lists don't function how I'd like ezpecially lists that I am working through in order, so Couch follows them: my own, ones I've liked, or any URL I paste. With no API, that means reading the public page. Scraping breaks, so it's done sparingly: each list at most once a week, one page at a time with a pause, and a failure marks only that list. Progress ("film 13 of 33") is computed live from my history, so the weekly read only matters when the list itself changes.
+Lists were another thing to handle. Letterboxd lists don't work the way I'd like, especially lists I'm working through in order, so Couch follows them: my own, ones I've liked, or any URL I paste. With no API, that means reading the public page. Scraping breaks, so it's done sparingly: each list at most once a week, one page at a time with a pause, and a failure marks only that list. Progress ("film 13 of 33") is computed live from my history, so the weekly read only matters when the list itself changes.
 
 ### How the picks work
 
@@ -198,7 +213,7 @@ const score = (c: Candidate) =>
 
 ### TV and films as equals on the homepage
 
-When Claude did the first run of the UI, what it did was TV-first because Simkl came first (Claude was Clauding). That was wrong: I only wanted TV, I'd just open Simkl and it was meant to be a one stop shop of everything movies and tv shows. The home page is organised by what I'd do next, both mixed: *Up next* (shows in progress plus the next film in lists I'm working through), *Ready tonight* (new episodes plus watchlist films on my services), then list progress, coming soon, and paused shows.
+When Claude did the first run of the UI, it made it TV-first because Simkl came first (Claude was Clauding). That was wrong: if I only wanted TV, I'd just open Simkl, and this was meant to be a one-stop shop for films and TV. The home page is organised by what I'd do next, both mixed: *Up next* (shows in progress plus the next film in lists I'm working through), *Ready tonight* (new episodes plus watchlist films on my services), then list progress, coming soon, and paused shows.
 
 ![Couch home: Up next and Ready tonight, TV and films mixed](/writing/comics-and-couch/couch-home.webp)
 
@@ -206,7 +221,7 @@ Small fix along the way: Simkl's episode total includes episodes that haven't ai
 
 ### Handling local drives
 
-I also have films and TV shows on external drives that I would like to be tracked. Comics knows what's on its disk because it put it there; Couch has to find out, so it has a scanner, run on whichever machine the drives are plugged into, that can push results to the deployed app:
+I also have films and TV shows on external drives that I'd like tracked. Comics knows what's on its disk because it put it there; Couch has to find out, so it has a scanner, run on whichever machine the drives are plugged into, that can push results to the deployed app:
 
 ```bash
 npm run cli -- scan /Volumes/MyDrive --dry-run
@@ -227,7 +242,7 @@ Scene-style film names are cut at the first release tag (`1080p`, `BluRay`, `x26
 
 ### Authentication
 
-Comics uses a basic app-level auth. I wanted to use passkey and fingerprint, so Couch uses passkeys via `@simplewebauthn/server`. A setup code from the environment registers the first one; after that, sign-in is passkey-only, synced passkeys work across devices, and new devices can be added with a one-time ten-minute code. Sessions are server-side and stored hashed. The scanner can't do WebAuthn, so pushing a scan uses a separate token.
+Comics uses basic app-level auth. I wanted to sign in with a passkey and my fingerprint, so Couch uses passkeys via `@simplewebauthn/server`. A setup code from the environment registers the first one; after that, sign-in is passkey-only, synced passkeys work across devices, and new devices can be added with a one-time ten-minute code. Sessions are server-side and stored hashed. The scanner can't do WebAuthn, so pushing a scan uses a separate token.
 
 One bundling gotcha: the library's X.509 dependency needs `reflect-metadata` loaded first, and bundling broke that order. Shipping it as a traced external instead of bundling it fixed it.
 
@@ -254,7 +269,17 @@ The bigger lesson is that the second app is where the first one pays off. Most o
 - **Connect the drives.** Couch's scanner is tested against real naming patterns, but the drives aren't attached to my current machine yet.
 - **Make "not for me" say why.** Right now it only excludes a title; it should feed a reason back into the taste profile.
 - **Share more code.** The two apps share conventions and a theme by copy. If a third one shows up, the shared pieces (log client, auth, theme, deploy workflow) should become a package.
-- **Kudi** On the theme of niche personal web applications, I am already using this one already and I think this one has sme promise for wide use. But I need to use it as a daily driver for a while and see pain points and possible common ground for pass use if it would ever be possible.
+- **Kudi.** On the theme of niche personal web applications, I'm already using this one, and I think it has some promise for wider use. But I need to use it as a daily driver for a while to find the pain points, and whether there's common ground for wider use at all.
+
+---
+
+## Conclusion
+
+A few questions I keep coming back to:
+
+1. **Can a non-technical person build something like this to their taste?** Obviously yes. Claude and other state-of-the-art models can (even the tier below should manage). The harder part is connecting everything I had to connect and deal with. Those aren't challenges for the LLMs, though; they're about how those services fit together and how to get access to them. So imagine you have your own personal agent (Meta's Muse, dots, Claude Duet, Instinct and the like). Some of them already come with a computer of their own in the cloud, so they could build this for you. The sticking point might be deployment.
+2. **Is this a daily driver?** Lolz, no it isn't. Unfortunately, I don't read every day, and I don't watch films or TV every day. The benefit is having up-to-date information when I need it, and making decisions based on it.
+3. **So, to go back to how I started: is this the golden age of personal software?** Honestly, I think not. We're on our way there, just not there yet. I think this is mostly because, plain and simple, as humans we get bored. What tends to happen is that we get excited building these things, and then they fall by the wayside, because in the wise words of The Verge's Nilay Patel, ["the people do not yearn for automation"](https://www.theverge.com/podcast/917029/software-brain-ai-backlash-databases-automation). I believe this will play out once I'm done with my budget app experiment, Kudi. It's built and in use, with some automations, but other things are still manual entries. Not so fun. And even where I do want automation, it still needs fiddling. Money doesn't arrive in neat categories, so the automations need room to be overridden, and I keep adjusting them. The upside of personal software is that I can. But who knows, let's see how things play out. I'm happy to be wrong about it. I sha will still build more stuff, because I can't help myself 🤷🏾
 
 ---
 

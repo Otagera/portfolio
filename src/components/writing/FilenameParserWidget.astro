@@ -1,0 +1,491 @@
+<div class="writing-widget">
+  <div class="panel">
+    <div class="prompt-row">
+      <span class="sigil">$</span>
+      <span class="cmd" id="fpw-cmd">parseFilename(…)</span>
+      <span class="cursor"></span>
+    </div>
+    <div class="controls fpw-controls">
+      <div class="fpw-examples">
+        <span class="control-label">try one</span>
+        <div class="fpw-chips" id="fpw-chips"></div>
+      </div>
+      <label class="fpw-field">
+        <span class="control-label">filename</span>
+        <input id="fpw-file" type="text" spellcheck="false" autocomplete="off" />
+      </label>
+      <div class="fpw-row2">
+        <label class="fpw-field">
+          <span class="control-label">drive bucket</span>
+          <select id="fpw-bucket">
+            <option value="">(none)</option>
+            <option>DC</option>
+            <option>Marvel</option>
+            <option>Image</option>
+            <option>Others</option>
+          </select>
+        </label>
+        <label class="fpw-field fpw-grow">
+          <span class="control-label">parent folder</span>
+          <input id="fpw-folder" type="text" spellcheck="false" autocomplete="off" placeholder="(none)" />
+        </label>
+      </div>
+    </div>
+    <div class="stage">
+      <dl class="fpw-out" id="fpw-out"></dl>
+      <div class="fpw-path-label control-label">lands in Komga's library at</div>
+      <div class="fpw-path" id="fpw-path"></div>
+      <div class="fpw-note" id="fpw-note"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .fpw-controls {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .fpw-examples {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fpw-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .fpw-row2 {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .fpw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .fpw-grow {
+    flex: 1 1 200px;
+  }
+  .fpw-field input,
+  .fpw-field select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-page);
+    color: var(--fg);
+    width: 100%;
+    min-width: 0;
+  }
+  .fpw-field input:focus-visible,
+  .fpw-field select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .fpw-out {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(130px, 40%), 1fr));
+    gap: 8px;
+    margin: 0 0 18px;
+  }
+  :global(.fpw-cell) {
+    background: var(--bg-well);
+    border: 1px solid var(--border-faint);
+    border-radius: 6px;
+    padding: 8px 10px;
+    min-width: 0;
+  }
+  :global(.writing-widget .fpw-cell dt) {
+    padding: 0;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  :global(.writing-widget .fpw-cell dd) {
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fg);
+    overflow-wrap: anywhere;
+  }
+  :global(.fpw-cell dd.null) {
+    color: var(--muted);
+    font-weight: 400;
+    font-style: italic;
+  }
+  :global(.fpw-cell.wide) {
+    grid-column: 1 / -1;
+  }
+  :global(.fpw-cell.series dd) {
+    color: var(--accent);
+    font-size: 15px;
+  }
+  :global(.fpw-meter) {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-grp);
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  :global(.fpw-meter span) {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.25s;
+  }
+  .fpw-path-label {
+    display: block;
+    margin-bottom: 6px;
+  }
+  .fpw-path {
+    font-size: 12px;
+    padding: 10px 12px;
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+  }
+  :global(.fpw-path b) {
+    color: var(--accent);
+  }
+  .fpw-note {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    padding: 12px 0 16px;
+    min-height: 1.6em;
+  }
+</style>
+
+<script>
+  // A browser copy of comics/src/server/parse/filename.ts. Same rules, same
+  // order; only the types are trimmed.
+
+  type ComicKind = 'issue' | 'volume' | 'collection' | 'oneshot' | 'unknown';
+  interface ParsedName {
+    series: string;
+    title: string | null;
+    issue: string | null;
+    volume: number | null;
+    year: number | null;
+    publisher: string | null;
+    kind: ComicKind;
+    tags: string[];
+    confidence: number;
+    folderIsSeries: boolean;
+  }
+
+  const TAG_WORDS = [
+    'digital', 'digital-sd', 'digital-hd', 'webrip', 'scan', 'c2c', 'f', 'fixed',
+    'repack', 'covers only', 'covers', 'collection', 'complete', 'nodrm', 'hd',
+  ];
+  const TAG_SUFFIXES = ['-empire', '-dcp', 'scanning', 'empire', ' scan'];
+  const PUBLISHERS = [
+    'DC', 'Marvel', 'Image', 'Dark Horse', 'IDW', 'BOOM! Studios', 'Boom',
+    'Valiant', 'Vertigo', 'Dynamite', 'Oni Press', 'Oni', 'Titan', 'Aftershock',
+    'Archie', 'Fantagraphics', 'Abstract Studio', 'Black Mask',
+  ];
+  const NON_SERIES_BUCKETS = new Set(['others', 'other', 'misc', 'miscellaneous', 'unsorted', 'comics']);
+  const COLLECTION_WORDS = [
+    'omnibus', 'deluxe edition', 'complete collection', 'gallery edition',
+    'compendium', 'treasury', 'anthology', 'collected', 'years of', 'graphic novel',
+  ];
+  const SITE_TAGS = [/\bGetComics\.INFO\b/gi, /\bcomicsw\b/gi];
+  const ARTICLES = /^(the|a|an)\s+/i;
+
+  function yearOf(s: string): number | null {
+    const m = /^(19|20)\d{2}/.exec(s.trim());
+    return m ? Number(m[0]) : null;
+  }
+  function looksLikeTag(raw: string): boolean {
+    const s = raw.trim().toLowerCase();
+    if (!s) return true;
+    if (TAG_WORDS.includes(s)) return true;
+    if (TAG_SUFFIXES.some((suf) => s.endsWith(suf))) return true;
+    if (s.length <= 3 && !/^\d+$/.test(s)) return true;
+    return false;
+  }
+  const tidy = (s: string) => s.replace(/\s+/g, ' ').trim();
+  const trimEdges = (s: string) => tidy(s).replace(/^[\s._:-]+/, '').replace(/[\s._:-]+$/, '');
+  function normaliseKey(s: string): string {
+    return s
+      .toLowerCase()
+      .replace(ARTICLES, '')
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  function parseFilename(fileName: string, bucket: string | null, folder: string | null): ParsedName {
+    let stem = fileName.replace(/\.(cbz|cbr|cb7|cbt|zip|rar|7z)$/i, '');
+    for (const re of SITE_TAGS) stem = stem.replace(re, ' ');
+
+    const groups: string[] = [];
+    const head = stem.replace(/\(([^()]*)\)/g, (_m, inner: string) => {
+      groups.push(inner);
+      return ' ';
+    });
+
+    let year: number | null = null;
+    let publisher: string | null = null;
+    const rawTags: string[] = [];
+    for (const g of groups) {
+      const y = yearOf(g);
+      if (y !== null && year === null) {
+        year = y;
+        continue;
+      }
+      const pub = PUBLISHERS.find((p) => p.toLowerCase() === g.trim().toLowerCase());
+      if (pub && !publisher) {
+        publisher = pub;
+        continue;
+      }
+      rawTags.push(g.trim());
+    }
+
+    const rest = trimEdges(head);
+    let volume: number | null = null;
+    let issue: string | null = null;
+    let seriesPart = rest;
+    let subtitlePart: string | null = null;
+
+    const vol = /\b(?:v|vol\.?|volume|book)\s*(\d{1,3})\b/i.exec(rest);
+    if (vol) {
+      volume = Number(vol[1]);
+      seriesPart = rest.slice(0, vol.index);
+      subtitlePart = rest.slice(vol.index + vol[0].length);
+    }
+
+    const iss = /#\s*(\d{1,4})\b/.exec(seriesPart);
+    if (iss) {
+      issue = String(Number(iss[1]));
+      seriesPart = seriesPart.replace(iss[0], ' ');
+    }
+
+    if (issue === null) {
+      const range = /\b(\d{2,4})\s*-\s*(\d{2,4})\b/.exec(seriesPart);
+      if (range) {
+        issue = `${range[1]}-${range[2]}`;
+        seriesPart = seriesPart.slice(0, range.index) + ' ' + seriesPart.slice(range.index + range[0].length);
+      }
+    }
+
+    let series = trimEdges(seriesPart);
+    let title: string | null = subtitlePart ? trimEdges(subtitlePart) || null : null;
+
+    if (volume === null) {
+      const parts = series.split(/\s+-\s+/);
+      for (let i = 1; i < parts.length; i++) {
+        const seg = (parts[i] ?? '').toLowerCase();
+        if (COLLECTION_WORDS.some((w) => seg.includes(w))) {
+          title = trimEdges(parts.slice(i).join(' - '));
+          series = trimEdges(parts.slice(0, i).join(' - '));
+          break;
+        }
+      }
+    }
+
+    const trailing = /\s+(\d{1,4})$/.exec(series);
+    const seriesForCompare = trailing ? series.slice(0, trailing.index) : series;
+    const seriesNorm = normaliseKey(seriesForCompare);
+    const folderNorm = folder ? normaliseKey(folder) : '';
+    const folderIsSeries =
+      !!folder &&
+      !!seriesNorm &&
+      !NON_SERIES_BUCKETS.has(folder.toLowerCase()) &&
+      !PUBLISHERS.some((p) => p.toLowerCase() === folder.toLowerCase()) &&
+      folderNorm.includes(seriesNorm);
+
+    if (folderIsSeries && folder) {
+      series = tidy(folder);
+      if (trailing && issue === null) issue = trailing[1] ?? null;
+    }
+
+    if (!publisher && bucket) {
+      const pub = PUBLISHERS.find((p) => p.toLowerCase() === bucket.toLowerCase());
+      if (pub) publisher = pub;
+    }
+
+    const haystack = stem.toLowerCase();
+    let kind: ComicKind;
+    if (COLLECTION_WORDS.some((w) => haystack.includes(w))) kind = 'collection';
+    else if (volume !== null) kind = 'volume';
+    else if (issue !== null) kind = 'issue';
+    else if (series) kind = 'oneshot';
+    else kind = 'unknown';
+
+    let confidence = 0;
+    if (series) {
+      confidence += 0.4;
+      if (year !== null) confidence += 0.25;
+      if (volume !== null || issue !== null) confidence += 0.2;
+      if (publisher) confidence += 0.1;
+      if (folderIsSeries) confidence += 0.05;
+    }
+
+    return {
+      series: series || trimEdges(stem),
+      title,
+      issue,
+      volume,
+      year,
+      publisher,
+      kind,
+      tags: rawTags.filter((t) => !looksLikeTag(t)),
+      confidence: Math.min(1, Number(confidence.toFixed(2))),
+      folderIsSeries,
+    };
+  }
+
+  function libraryRelPath(p: ParsedName, fileName: string): [string, string, string] {
+    const safe = (s: string) => s.replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim() || 'Unknown';
+    return [p.publisher ? safe(p.publisher) : 'Unsorted', safe(p.series), fileName];
+  }
+
+  interface Example {
+    label: string;
+    file: string;
+    bucket: string;
+    folder: string;
+    note: string;
+  }
+
+  const EXAMPLES: Example[] = [
+    {
+      label: 'Alias',
+      file: 'Alias v01 (2001) (Digital) (F) (Zone-Empire).cbr',
+      bucket: 'Marvel',
+      folder: 'Jessica Jones - Alias',
+      note: 'The file only says "Alias". The folder contains that name, so the folder wins and the series becomes "Jessica Jones - Alias". The release-group tags never reach the name.',
+    },
+    {
+      label: 'Marvel 001-006',
+      file: 'History of the Marvel Universe 001-006 (2019) (Digital) (Zone-Empire).cbr',
+      bucket: 'Marvel',
+      folder: '',
+      note: 'One release holding issues 1 to 6. The range is stored as the issue, so the series is not called "History of the Marvel Universe 001-006".',
+    },
+    {
+      label: 'Man of Steel 02',
+      file: 'The Man of Steel 02 (1986).cbz',
+      bucket: 'DC',
+      folder: 'The Man of Steel 01-06 (1986)',
+      note: 'The trailing 02 is ignored only when comparing with the folder, so all six files land in one series and 02 becomes the issue. Clear the folder and see what happens.',
+    },
+    {
+      label: 'Top 10',
+      file: 'Top 10 #01 (1999) (c2c).cbz',
+      bucket: 'Others',
+      folder: '',
+      note: 'A title that really ends in a number keeps it. "Others" is a catch-all bucket, so it is not treated as a publisher.',
+    },
+    {
+      label: 'Deluxe edition',
+      file: 'Detective Comics - 80 Years of Batman - The Deluxe Edition (2019) (Digital).cbr',
+      bucket: 'DC',
+      folder: '',
+      note: 'The split happens at the earliest edition-looking segment, so the series is "Detective Comics" and the rest is the title.',
+    },
+    {
+      label: 'Absolute Batman',
+      file: 'Absolute Batman v01 - The Zoo (2025) (Digital) GetComics.INFO.cbz',
+      bucket: 'DC',
+      folder: 'Absolute Universe',
+      note: 'The folder groups several series (Batman, Superman, Wonder Woman), so it does not contain this name and does not win. The site watermark is stripped.',
+    },
+  ];
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const fileEl = $<HTMLInputElement>('fpw-file');
+  const bucketEl = $<HTMLSelectElement>('fpw-bucket');
+  const folderEl = $<HTMLInputElement>('fpw-folder');
+  const outEl = $<HTMLElement>('fpw-out');
+  const pathEl = $<HTMLElement>('fpw-path');
+  const noteEl = $<HTMLElement>('fpw-note');
+  const cmdEl = $<HTMLElement>('fpw-cmd');
+  const chipsEl = $<HTMLElement>('fpw-chips');
+
+  let activeNote = '';
+
+  const esc = (s: string) =>
+    s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
+
+  function cell(label: string, value: string | number | null, extra = ''): string {
+    const empty = value === null || value === '';
+    return `<div class="fpw-cell ${extra}"><dt>${label}</dt><dd class="${empty ? 'null' : ''}">${
+      empty ? 'none' : esc(String(value))
+    }</dd></div>`;
+  }
+
+  function render() {
+    const file = fileEl.value.trim();
+    const bucket = bucketEl.value || null;
+    const folder = folderEl.value.trim() || null;
+    cmdEl.textContent = file ? `parseFilename("${file.length > 48 ? file.slice(0, 45) + '…' : file}")` : 'parseFilename(…)';
+    if (!file) {
+      outEl.innerHTML = '';
+      pathEl.textContent = 'type a filename';
+      noteEl.textContent = '';
+      return;
+    }
+    const p = parseFilename(file, bucket, folder);
+    const pct = Math.round(p.confidence * 100);
+    outEl.innerHTML =
+      cell('series', p.series, 'wide series') +
+      cell('title', p.title, 'wide') +
+      cell('issue', p.issue) +
+      cell('volume', p.volume) +
+      cell('year', p.year) +
+      cell('publisher', p.publisher) +
+      cell('kind', p.kind) +
+      cell('tags', p.tags.length ? p.tags.join(', ') : null) +
+      `<div class="fpw-cell"><dt>confidence</dt><dd>${pct}%</dd><div class="fpw-meter"><span style="width:${pct}%"></span></div></div>` +
+      cell('series from', p.folderIsSeries ? 'folder' : 'filename');
+    const [top, series, name] = libraryRelPath(p, file);
+    pathEl.innerHTML = `${esc(top)}/<b>${esc(series)}</b>/${esc(name)}`;
+    noteEl.textContent = activeNote;
+  }
+
+  function load(ex: Example) {
+    fileEl.value = ex.file;
+    bucketEl.value = ex.bucket;
+    folderEl.value = ex.folder;
+    activeNote = ex.note;
+    chipsEl.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.label === ex.label)));
+    render();
+  }
+
+  for (const ex of EXAMPLES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = ex.label;
+    b.dataset.label = ex.label;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => load(ex));
+    chipsEl.appendChild(b);
+  }
+
+  const edited = () => {
+    activeNote = '';
+    chipsEl.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    render();
+  };
+  fileEl.addEventListener('input', edited);
+  folderEl.addEventListener('input', edited);
+  bucketEl.addEventListener('change', edited);
+
+  const first = EXAMPLES[0];
+  if (first) load(first);
+</script>
